@@ -1,19 +1,17 @@
 class Solution {
     public int removeElement(int[] nums, int val) {
-        int sameval = 0;
-        int[] expectedNums = new int[nums.length];
-
-        for(int i = 0 ; i<nums.length ; i++){
-            if(nums[i] != val){
-                expectedNums[i-sameval] = nums[i];
+        int s = 0;
+        int h = nums.length-1;
+        while(s <= h){
+            if(nums[s] == val){
+                int temp = nums[s];
+                nums[s] = nums[h];
+                nums[h] = temp;
+                h--;
             }else{
-                sameval++;
+                s++;
             }
         }
-        for(int i = 0 ; i<expectedNums.length ; i++){
-            nums[i] = expectedNums[i];
-        }
-        int k = nums.length-sameval;
-        return k;
+        return s;
     }
 }
