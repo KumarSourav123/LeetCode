@@ -1,24 +1,22 @@
 class Solution {
     public void moveZeroes(int[] nums) {
-        int val = 0;
-        int count = 0;
+        int zero = 0;
+        int number = 1;
 
-        for(int i = 0 ; i<nums.length-1 ;i++){
-
-            if(val == nums[i] && nums[i] == nums[i+1]){
-                count++;
-            }
-
-            if(val == nums[i] && nums[i] != nums[i+1]){
-                if(count>0){
-                    int swap = nums[i+1];
-                    nums[i+1] = nums[i-count];
-                    nums[i-count] = swap;
+        while(number < nums.length && zero < nums.length){
+            if((nums[zero] == 0) && (nums[number] != 0)){
+                int temp = nums[zero];
+                nums[zero] = nums[number];
+                nums[number] = temp;
+            }else{
+                if(nums[zero] == 0){
+                    number++;
+                }else {
+                    zero++;
+                    number++;
                 }
-                int swap = nums[i+1];
-                nums[i+1] = nums[i];
-                nums[i] = swap;
             }
         }
+        
     }
 }
