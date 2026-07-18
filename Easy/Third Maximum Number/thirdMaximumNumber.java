@@ -1,45 +1,31 @@
 class Solution {
     public int thirdMax(int[] nums) {
-        int max = nums[0];
-        int secondMax = nums[0];
-        int thirdMax = nums[0];
+        long max = Long.MIN_VALUE;
+        long secondMax = Long.MIN_VALUE;
+        long thirdMax = Long.MIN_VALUE;
         int count = 0;
 
-        for(int i = 1; i<nums.length ; i++){
+        for(int i = 0; i<nums.length ; i++){
             if(nums[i] > max){
+                thirdMax = secondMax;
+                secondMax = max;
                 max = nums[i];
+                count++;
             }
-        }
-
-        for(int i = 1; i<nums.length ; i++){
-
-            if(secondMax == max){
+            else if((nums[i] > secondMax) && (nums[i] != max)){
+                thirdMax = secondMax;
                 secondMax = nums[i];
+                count++;
             }
-            if(secondMax != max){
-                if(nums[i] >= secondMax && nums[i] != max){
-                secondMax = nums[i];
-                }
-            }           
-        }
-
-        for(int i = 1; i<nums.length ; i++){
-
-            if(thirdMax == max || thirdMax == secondMax){
+            else if((nums[i] > thirdMax) && (nums[i] != secondMax) && (nums[i] != max)){
                 thirdMax = nums[i];
-            }
-            if(thirdMax != max && thirdMax != secondMax){
-                count=1;
-                if(nums[i] >= thirdMax && nums[i] != max && nums[i] != secondMax){
-                    thirdMax = nums[i];
-                }
+                count++;
             }
         }
-
-        if(count == 1){
-            return thirdMax;
+        if(count >= 3){
+            return (int)thirdMax;
         }else{
-            return max;
+            return (int)max;
         }
     }
 }
