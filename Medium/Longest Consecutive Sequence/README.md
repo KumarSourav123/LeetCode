@@ -1,4 +1,4 @@
-# LeetCode 128 - Longest Consecutive Sequence
+# LeetCode 128 - Longest Consecutive Sequence (HashSet Approach)
 
 ## Problem Statement
 
@@ -35,17 +35,17 @@ Output: 3
 
 ## Approach
 
-This solution uses a **HashMap to track the length of the consecutive sequence each number belongs to**, merging neighboring sequences on the fly.
+This solution uses a **HashSet combined with a "start-of-sequence" check** to expand each consecutive run exactly once.
 
 ### Idea
 
-- For each number `num` in `nums` (skipping it if it's already been processed and exists in the map):
-  - Look up the length of the sequence ending just before `num` (`left = map.get(num - 1)`) and the length of the sequence starting just after `num` (`right = map.get(num + 1)`), defaulting to `0` if they don't exist.
-  - The new total sequence length that `num` creates by bridging these two sequences is `left + right + 1`.
-  - Store this `total` at `num` itself.
-  - If a left-neighboring sequence exists, update the entry at its **starting boundary** (`num - left`) to reflect the new merged `total`, so future lookups from that end get the correct length.
-  - Similarly, if a right-neighboring sequence exists, update the entry at its **ending boundary** (`num + right`) to reflect the new merged `total`.
-- After processing all numbers, scan the map for the maximum value stored, which represents the length of the longest consecutive sequence found.
+- Add all elements of `nums` into a `HashSet` to allow O(1) lookups and remove duplicates.
+- For each number `num` in the set:
+  - If `num - 1` exists in the set, skip it — `num` is **not** the start of a sequence, since a smaller consecutive number already precedes it (it will be counted when its sequence's actual start is processed).
+  - If `num - 1` does **not** exist, `num` must be the **start** of a consecutive sequence. Expand forward using a `while` loop, checking `num + 1`, `num + 2`, and so on, incrementing `count` and `current` as long as consecutive numbers exist in the set.
+  - Update `maxLength` with the larger of the current `count` and the previous `maxLength`.
+
+Because a sequence is only expanded when its true starting number is found, each element in the array is visited **at most twice overall** (once in the outer loop, and once during the inner `while` expansion of its own sequence).
 
 ---
 
@@ -54,37 +54,33 @@ This solution uses a **HashMap to track the length of the consecutive sequence e
 ```java
 class Solution {
     public int longestConsecutive(int[] nums) {
-        HashMap<Integer, Integer> map = new HashMap<>();
-        int length = 0;
+        HashSet<Integer> set = new HashSet<>();
+        int n = nums.length;
+        int maxLength = 1;
+
+        if (n == 0) {
+            return 0;
+        }
 
         for (int num : nums) {
-            if (map.containsKey(num)) {
+            set.add(num);
+        }
+
+        for (int num : set) {
+            if (set.contains(num - 1)) {
                 continue;
-            }
-
-            int left = map.getOrDefault(num - 1, 0);
-            int right = map.getOrDefault(num + 1, 0);
-
-            int total = left + right + 1;
-
-            map.put(num, total);
-
-            if (left > 0) {
-                map.put(num - left, total);
-            }
-
-            if (right > 0) {
-                map.put(num + right, total);
+            } else {
+                int current = num;
+                int count = 1;
+                while (set.contains(current + 1)) {
+                    count++;
+                    current++;
+                }
+                maxLength = Math.max(count, maxLength);
             }
         }
 
-        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
-            if (entry.getValue() > length) {
-                length = entry.getValue();
-            }
-        }
-
-        return length;
+        return maxLength;
     }
 }
 ```
@@ -99,16 +95,16 @@ class Solution {
 nums = [100,4,200,1,3,2]
 ```
 
-| num | left | right | total | Boundary Updates | map after step |
-|-----|------|-------|-------|-------------------|-----------------|
-|100|0|0|1|none|{100:1}|
-|4|0|0|1|none|{100:1, 4:1}|
-|200|0|0|1|none|{100:1, 4:1, 200:1}|
-|1|0|0|1|none|{100:1, 4:1, 200:1, 1:1}|
-|3|0|1 (from 4)|2|right>0 → map[4]=2|{100:1, 4:2, 200:1, 1:1, 3:2}|
-|2|1 (from 1)|2 (from 3)|4|left>0 → map[1]=4; right>0 → map[4]=4|{100:1, 4:4, 200:1, 1:4, 3:2, 2:4}|
+**Set built from nums:** `{100, 4, 200, 1, 3, 2}`
 
-Scanning the final map for the maximum value: `1, 4, 1, 4, 2, 4` → maximum is `4`.
+| num | set.contains(num-1)? | Action | count | maxLength |
+|-----|------------------------|--------|-------|-----------|
+|100|No (99 absent)|Start sequence → expand: 101 absent|1|1|
+|4|Yes (3 present)|Skip (not a sequence start)|-|1|
+|200|No (199 absent)|Start sequence → expand: 201 absent|1|1|
+|1|No (0 absent)|Start sequence → expand: 2✓,3✓,4✓, then 5 absent|4|4|
+|3|Yes (2 present)|Skip (not a sequence start)|-|4|
+|2|Yes (1 present)|Skip (not a sequence start)|-|4|
 
 Output:
 
@@ -116,36 +112,36 @@ Output:
 4
 ```
 
-This matches `[1, 2, 3, 4]`, the longest consecutive sequence in the array.
+This matches the sequence `[1, 2, 3, 4]`, correctly identified starting from `1`.
 
 ---
 
 ## Why This Approach Works
 
-Every time a new number is added, it checks both its immediate neighbors (`num - 1` and `num + 1`) to see if it's extending or bridging existing sequences.
+Checking `set.contains(num - 1)` before expanding ensures that each consecutive sequence is only ever expanded from its **true starting point**, avoiding redundant re-scans of the same run from the middle.
 
-By updating the values stored at the **boundary** endpoints (the far left and far right ends of the merged sequence) rather than every element inside it, each number is only touched a constant number of times, and any future number that connects to the same sequence will correctly find the merged length by looking at its own neighbor's boundary entry.
+Since every number is either skipped immediately (O(1) check) or is a sequence start that gets expanded exactly once through its own run, the total work across all numbers stays linear.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(n)` — each number triggers at most a constant number of map operations
-- **Space Complexity:** `O(n)` — for storing sequence lengths in the HashMap
+- **Time Complexity:** `O(n)` — every element is visited a constant number of times overall
+- **Space Complexity:** `O(n)` — for storing all elements in the HashSet
 
 ---
 
 ## Key Insight
 
-Instead of sorting the array first (which would cost `O(n log n)`) or repeatedly expanding outward from every number (which can degrade to `O(n^2)` in the worst case), maintaining sequence lengths only at the **boundaries** of each run lets sequences merge in **O(1)** per number, achieving true `O(n)` overall time.
+Compared to the HashMap-based boundary-merging approach, this HashSet approach avoids updating boundary values altogether — instead, it relies on the simple observation that **only numbers with no left neighbor in the set can be the start of a sequence**, making the expansion logic more straightforward while keeping the same `O(n)` guarantee.
 
 ---
 
 ## Concepts Used
 
 - Array
-- HashMap
+- HashSet
 - Hashing
-- Union-by-Boundary Technique
-- Sequence Merging
+- Sequence Start Detection
+- Set Membership Lookup
 - Constant-Time Lookup
