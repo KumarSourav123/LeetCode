@@ -1,4 +1,4 @@
-# LeetCode 48 - Rotate Image
+# LeetCode 48 - Rotate Image (In-Place Transpose + Reverse Approach)
 
 ## Problem Statement
 
@@ -29,13 +29,16 @@ Output: [[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]
 
 ## Approach
 
-This solution uses a **helper matrix (`matrixTwo`)** to compute the rotated positions, then copies the result back into the original matrix.
+This solution performs a true **in-place, constant-space rotation** by first **transposing** the matrix, then **reversing each row**.
 
 ### Idea
 
-- For a 90-degree clockwise rotation, the element at `matrix[i][j]` moves to position `matrixTwo[j][m - i - 1]`, where `m` is the number of rows. This mapping comes from the fact that the **first column** of the rotated matrix (read top to bottom) is the **first row** of the original matrix (read left to right, but placed bottom to top).
-- **First pass:** Iterate through every cell `matrix[i][j]` of the original matrix and place it into its rotated position in `matrixTwo`.
-- **Second pass:** Copy every value from `matrixTwo` back into `matrix`, so the original matrix reflects the rotated result "in place" from the caller's perspective.
+A 90-degree clockwise rotation can be broken down into two simpler, well-known operations:
+
+- **Step 1 — Transpose the matrix:** Swap `matrix[i][j]` with `matrix[j][i]` for every cell above (or on) the main diagonal (`j <= i`). This flips rows into columns, turning the matrix into its transpose.
+- **Step 2 — Reverse each row:** For every row `i`, swap elements from the two ends inward (`j` from `0` to `n/2 - 1`, swapping `matrix[i][j]` with `matrix[i][n-j-1]`). Reversing each row after transposing completes the clockwise rotation.
+
+Both steps modify the matrix directly with only a single temporary variable, requiring no auxiliary matrix at all.
 
 ---
 
@@ -48,17 +51,19 @@ class Solution {
         int m = matrix.length;
         int n = matrix[0].length;
 
-        int[][] matrixTwo = new int[m][n];
-
         for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                matrixTwo[j][m - i - 1] = matrix[i][j];
+            for (int j = 0; j <= i; j++) {
+                int temp = matrix[i][j];
+                matrix[i][j] = matrix[j][i];
+                matrix[j][i] = temp;
             }
         }
 
         for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                matrix[i][j] = matrixTwo[i][j];
+            for (int j = 0; j < n / 2; j++) {
+                int temp = matrix[i][j];
+                matrix[i][j] = matrix[i][n - j - 1];
+                matrix[i][n - j - 1] = temp;
             }
         }
     }
@@ -79,29 +84,32 @@ matrix = [[1,2,3],
 
 `m = 3`, `n = 3`
 
-**First pass: map each element to its rotated position**
+**Step 1: Transpose (swap matrix[i][j] with matrix[j][i], for j <= i)**
 
-| i | j | matrix[i][j] | Target: matrixTwo[j][m-i-1] |
-|---|---|---------------|-------------------------------|
-|0|0|1|matrixTwo[0][2] = 1|
-|0|1|2|matrixTwo[1][2] = 2|
-|0|2|3|matrixTwo[2][2] = 3|
-|1|0|4|matrixTwo[0][1] = 4|
-|1|1|5|matrixTwo[1][1] = 5|
-|1|2|6|matrixTwo[2][1] = 6|
-|2|0|7|matrixTwo[0][0] = 7|
-|2|1|8|matrixTwo[1][0] = 8|
-|2|2|9|matrixTwo[2][0] = 9|
+| i | j | Swap | Matrix After |
+|---|---|------|--------------|
+|0|0|matrix[0][0] ↔ matrix[0][0] (no change)|[[1,2,3],[4,5,6],[7,8,9]]|
+|1|0|matrix[1][0] ↔ matrix[0][1]|[[1,4,3],[2,5,6],[7,8,9]]|
+|1|1|matrix[1][1] ↔ matrix[1][1] (no change)|[[1,4,3],[2,5,6],[7,8,9]]|
+|2|0|matrix[2][0] ↔ matrix[0][2]|[[1,4,7],[2,5,6],[3,8,9]]|
+|2|1|matrix[2][1] ↔ matrix[1][2]|[[1,4,7],[2,5,8],[3,6,9]]|
+|2|2|matrix[2][2] ↔ matrix[2][2] (no change)|[[1,4,7],[2,5,8],[3,6,9]]|
 
-Resulting `matrixTwo`:
+Matrix after transpose:
 
 ```text
-[[7,4,1],
- [8,5,2],
- [9,6,3]]
+[[1,4,7],
+ [2,5,8],
+ [3,6,9]]
 ```
 
-**Second pass: copy matrixTwo back into matrix**
+**Step 2: Reverse each row (n/2 = 1, so j = 0 only)**
+
+| i | Swap | Row After |
+|---|------|-----------|
+|0|matrix[0][0] ↔ matrix[0][2] → 1 ↔ 7|[7,4,1]|
+|1|matrix[1][0] ↔ matrix[1][2] → 2 ↔ 8|[8,5,2]|
+|2|matrix[2][0] ↔ matrix[2][2] → 3 ↔ 9|[9,6,3]|
 
 Final Matrix:
 
@@ -117,22 +125,22 @@ This matches the expected output.
 
 ## Why This Approach Works
 
-Rotating a matrix 90 degrees clockwise means that each original row becomes a column in the new matrix, but read from **bottom to top**. The formula `matrixTwo[j][m - i - 1] = matrix[i][j]` captures this exactly: row `i` of the original becomes column `m - i - 1` of the rotated matrix (counting from the left), and the original column index `j` becomes the new row index.
+Transposing the matrix converts every row into a column while keeping elements in the same relative order top-to-bottom. Reversing each row afterward flips that order left-to-right, which together produces exactly the effect of rotating the whole matrix 90 degrees clockwise.
 
-Since every original cell is mapped to a unique, non-overlapping position in `matrixTwo`, there's no risk of overwriting values mid-rotation the way there would be if rotating directly within a single matrix without care.
+Because both the transpose and the row-reversal swap elements **within the same matrix**, using only a single `temp` variable per swap, no auxiliary matrix or extra array is ever needed — satisfying the strict in-place requirement of the problem.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(n^2)` — two full passes over the matrix
-- **Space Complexity:** `O(n^2)` — for the helper `matrixTwo` array
+- **Time Complexity:** `O(n^2)` — each cell is visited a constant number of times across both passes
+- **Space Complexity:** `O(1)` — only a single temporary variable is used
 
 ---
 
 ## Key Insight
 
-While the problem asks not to **allocate another 2D matrix**, using a temporary `matrixTwo` array makes the rotation mapping straightforward and bug-free, at the cost of extra space. A true in-place `O(1)` space solution would instead perform the rotation via **layer-by-layer four-way swapping** (transposing the matrix and then reversing each row, or rotating groups of four cells directly), avoiding any extra array entirely.
+Unlike the earlier helper-matrix approach (which uses `O(n^2)` extra space to directly compute each rotated position), decomposing the rotation into **transpose + reverse rows** achieves the same result using only `O(1)` extra space, making it the optimal solution that fully satisfies the "do not allocate another 2D matrix" constraint.
 
 ---
 
@@ -140,6 +148,7 @@ While the problem asks not to **allocate another 2D matrix**, using a temporary 
 
 - Array
 - Matrix
-- Matrix Rotation
-- Index Mapping
+- Matrix Transpose
+- In-Place Swapping
 - Simulation
+- Constant Space Algorithm
