@@ -1,4 +1,4 @@
-# LeetCode 73 - Set Matrix Zeroes
+# LeetCode 73 - Set Matrix Zeroes (O(1) Space Approach)
 
 ## Problem Statement
 
@@ -29,20 +29,24 @@ Output: [[0,0,0,0],[0,4,5,0],[0,3,1,0]]
 ## Follow up:
 - A straightforward solution using `O(mn)` space is probably a bad idea.
 - A simple improvement uses `O(m + n)` space, but still not the best solution.
-- Could you devise a constant space solution?
+- Could you devise a **constant space** solution?
 
 ---
 
 ## Approach
 
-This solution uses two **HashSets** to record which rows and columns need to be zeroed out, then applies the changes in a second pass.
+This solution achieves **O(1) extra space** by using the **first row and first column of the matrix itself** as markers, instead of separate HashSets.
 
 ### Idea
 
-- **First pass:** Scan the entire matrix. Whenever `matrix[i][j] == 0` is found, record its row index `i` in the `row` set and its column index `j` in the `column` set.
-- **Second pass:** Scan the entire matrix again. For every cell `matrix[i][j]`, if its row index exists in `row` **or** its column index exists in `column`, set that cell to `0`.
-
-Recording the positions first (instead of zeroing immediately) prevents newly-created zeros from being mistaken for original zeros and incorrectly cascading further zeros.
+- Since `matrix[0][j]` and `matrix[i][0]` are being repurposed as markers, we first need a separate variable `col` to remember whether the **first column itself** originally needs to be zeroed (because `matrix[i][0]` is about to be overwritten with marker values, its original "is it zero" state would otherwise be lost).
+- **First pass:** Scan the whole matrix. Whenever `matrix[i][j] == 0` is found:
+  - Mark its row by setting `matrix[i][0] = 0`.
+  - Mark its column by setting `matrix[0][j] = 0` — unless `j == 0`, in which case the first column itself needs zeroing, so set the separate flag `col = 0` instead (to avoid immediately corrupting `matrix[i][0]`, which is also being used as a row marker).
+- **Second pass:** For the *inner* submatrix (`i` and `j` both starting from `1`, skipping the first row/column since they're now marker cells), if `matrix[i][j] != 0`, check whether its row marker (`matrix[i][0]`) or column marker (`matrix[0][j]`) is `0`. If so, zero out `matrix[i][j]`.
+- **Finally, handle the first row and first column themselves:**
+  - If `matrix[0][0] == 0`, the first row originally contained a zero, so zero out the entire first row.
+  - If `col == 0`, the first column originally contained a zero, so zero out the entire first column.
 
 ---
 
@@ -51,23 +55,42 @@ Recording the positions first (instead of zeroing immediately) prevents newly-cr
 ```java
 class Solution {
     public void setZeroes(int[][] matrix) {
-        HashSet<Integer> row = new HashSet<>();
-        HashSet<Integer> column = new HashSet<>();
+        int m = matrix.length;
+        int n = matrix[0].length;
+        int col = 1;
 
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[i].length; j++) {
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
                 if (matrix[i][j] == 0) {
-                    row.add(i);
-                    column.add(j);
+                    matrix[i][0] = 0;
+                    if (j != 0) {
+                        matrix[0][j] = 0;
+                    } else {
+                        col = 0;
+                    }
                 }
             }
         }
 
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[i].length; j++) {
-                if (row.contains(i) || column.contains(j)) {
-                    matrix[i][j] = 0;
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                if (matrix[i][j] != 0) {
+                    if (matrix[i][0] == 0 || matrix[0][j] == 0) {
+                        matrix[i][j] = 0;
+                    }
                 }
+            }
+        }
+
+        if (matrix[0][0] == 0) {
+            for (int i = 0; i < n; i++) {
+                matrix[0][i] = 0;
+            }
+        }
+
+        if (col == 0) {
+            for (int i = 0; i < m; i++) {
+                matrix[i][0] = 0;
             }
         }
     }
@@ -86,31 +109,33 @@ matrix = [[1,1,1],
           [1,1,1]]
 ```
 
-**First pass: locate zeros**
+`m = 3`, `n = 3`, `col = 1` (initially)
 
-| i | j | matrix[i][j] | Action |
-|---|---|---------------|--------|
-|0|0,1,2|1,1,1|no zero found|
-|1|0|1|no zero|
-|1|1|0|row.add(1), column.add(1)|
-|1|2|1|no zero|
-|2|0,1,2|1,1,1|no zero found|
+**First pass: mark row/column zeros using the matrix itself**
 
-Result: `row = {1}`, `column = {1}`
+| i | j | matrix[i][j] | Action | Matrix After |
+|---|---|---------------|--------|--------------|
+|1|1|0|j≠0 → matrix[1][0]=0, matrix[0][1]=0|[[1,0,1],[0,0,1],[1,1,1]]|
 
-**Second pass: apply zeroing**
+All other cells are non-zero, so no other markers are set. `col` remains `1`.
 
-| i | j | row.contains(i)? | column.contains(j)? | New Value |
-|---|---|--------------------|------------------------|-----------|
-|0|0|No|No|1|
-|0|1|No|Yes|0|
-|0|2|No|No|1|
-|1|0|Yes|-|0|
-|1|1|Yes|-|0|
-|1|2|Yes|-|0|
-|2|0|No|No|1|
-|2|1|No|Yes|0|
-|2|2|No|No|1|
+State after first pass: `matrix = [[1,0,1],[0,0,1],[1,1,1]]`, `col = 1`
+
+**Second pass: zero out inner cells based on markers (i, j starting from 1)**
+
+| i | j | matrix[i][j] | matrix[i][0]==0? | matrix[0][j]==0? | Action |
+|---|---|---------------|--------------------|------------------------|--------|
+|1|1|0|-|-|already 0, skipped (condition `!= 0` is false)|
+|1|2|1|Yes (matrix[1][0]=0)|-|matrix[1][2] = 0|
+|2|1|1|No|Yes (matrix[0][1]=0)|matrix[2][1] = 0|
+|2|2|1|No|No|stays 1|
+
+State after second pass: `matrix = [[1,0,1],[0,0,0],[1,0,1]]`
+
+**Final cleanup:**
+
+- `matrix[0][0] == 0`? No (`1`) → first row is **not** zeroed further.
+- `col == 0`? No (`1`) → first column is **not** zeroed further.
 
 Final Matrix:
 
@@ -126,30 +151,22 @@ This matches the expected output.
 
 ## Why This Approach Works
 
-Separating the "detection" phase from the "modification" phase ensures that the original positions of zeros are fully known **before** any cell is actually changed, so the zeroing of one row or column never gets misinterpreted as a fresh zero that would incorrectly trigger further row/column wipes.
+By reusing `matrix[i][0]` and `matrix[0][j]` as row/column markers instead of allocating separate sets, no extra data structure of size proportional to `m` or `n` is needed.
 
-Using sets for `row` and `column` allows O(1) membership checks during the second pass, so every cell only needs a constant amount of extra work to decide whether it should become zero.
+The `col` variable is essential because `matrix[i][0]` is being overloaded as a row marker — without a separate flag, information about whether the **first column** originally needed zeroing would be lost the moment any row marker gets set. Processing the first row and first column **last** (after the inner submatrix is fully resolved) ensures the marker values aren't consumed prematurely before they're used to zero out the inner cells.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(m × n)` — two full passes over the matrix
-- **Space Complexity:** `O(m + n)` — for storing the marked row and column indices
-
----
-
-## Follow-up Considerations
-
-- **O(mn) space (naive):** Copy the entire matrix first, then use the copy to check original values while modifying the original — wasteful since only row/column indices actually need to be remembered.
-- **O(m + n) space (this solution):** Track marked rows and columns using two sets, as shown above.
-- **O(1) constant space:** Instead of separate sets, use the **first row and first column of the matrix itself** as markers for which rows/columns contain a zero, along with two boolean flags to track whether the first row and first column originally contained a zero themselves. This avoids any extra data structure entirely.
+- **Time Complexity:** `O(m × n)` — a constant number of passes over the matrix
+- **Space Complexity:** `O(1)` — only a single extra integer (`col`) is used, satisfying the constant-space follow-up
 
 ---
 
 ## Key Insight
 
-By decoupling "finding zeros" from "applying zeros," this approach avoids the classic bug of cascading zeros overwriting the matrix mid-scan, while still achieving efficient row/column lookups through hashing — trading a bit of extra space (`O(m + n)`) for a simple and safe two-pass solution.
+The key trick is recognizing that the matrix's own first row and first column can double as the marker storage that would otherwise require a `HashSet` or boolean array — with just one extra variable (`col`) needed to resolve the ambiguity of the first column overlapping with the row markers.
 
 ---
 
@@ -157,7 +174,6 @@ By decoupling "finding zeros" from "applying zeros," this approach avoids the cl
 
 - Array
 - Matrix
-- HashSet
-- Hashing
 - In-Place Modification
 - Marking Technique
+- Constant Space Algorithm
