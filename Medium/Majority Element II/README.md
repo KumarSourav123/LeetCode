@@ -1,4 +1,4 @@
-# LeetCode 229 - Majority Element II
+# LeetCode 229 - Majority Element II (Boyer-Moore Voting Approach)
 
 ## Problem Statement
 
@@ -35,15 +35,20 @@ Could you solve the problem in linear time and in `O(1)` space?
 
 ## Approach
 
-This solution uses a **HashMap-based frequency count**, followed by a filtering pass to select qualifying elements.
+This solution uses the **Extended Boyer-Moore Voting Algorithm**, tracking **two candidates** simultaneously since at most two elements can appear more than `n/3` times.
 
 ### Idea
 
-- Traverse `nums` and build a `HashMap` where each key is a distinct element and its value is how many times that element appears.
-- Once the full frequency map is built, iterate over its entries. For every element whose frequency is **strictly greater than** `nums.length / 3`, add it to the result `list`.
-- Return the `list` containing all elements that satisfy the majority condition.
-
-Since at most two elements can appear more than `n/3` times in any array (a mathematical property of this threshold), the result list will always contain `0`, `1`, or `2` elements.
+- Maintain two candidate slots (`el1`, `el2`) and two counters (`count1`, `count2`), initializing the candidates to `Integer.MIN_VALUE` as sentinel "no candidate yet" values.
+- **First pass (candidate selection):** For each number:
+  - If `count1` is `0` and the number isn't currently `el2`, claim it as the new `el1` and set `count1 = 1`.
+  - Otherwise, if `count2` is `0` and the number isn't currently `el1`, claim it as the new `el2` and set `count2 = 1`.
+  - Otherwise, if the number matches `el1`, increment `count1`.
+  - Otherwise, if the number matches `el2`, increment `count2`.
+  - Otherwise (the number matches neither candidate and both slots are occupied), decrement **both** `count1` and `count2` — this is the "cancellation" step, similar to the single-candidate Boyer-Moore algorithm.
+- After this pass, `el1` and `el2` hold the only two possible candidates that *could* exceed the `n/3` threshold — but this doesn't guarantee they actually do.
+- **Second pass (verification):** Reset `count1` and `count2` to `0`, then recount the actual number of occurrences of `el1` and `el2` in the array.
+- Finally, only add `el1` and/or `el2` to the result list if their true counts exceed `nums.length / 3`.
 
 ---
 
@@ -52,21 +57,49 @@ Since at most two elements can appear more than `n/3` times in any array (a math
 ```java
 class Solution {
     public List<Integer> majorityElement(int[] nums) {
-        HashMap<Integer, Integer> map = new HashMap<>();
         ArrayList<Integer> list = new ArrayList<>();
 
-        for (int num : nums) {
-            if (map.containsKey(num)) {
-                map.put(num, map.get(num) + 1);
+        int count1 = 0;
+        int count2 = 0;
+        int el1 = Integer.MIN_VALUE;
+        int el2 = Integer.MIN_VALUE;
+
+        for (int i = 0; i < nums.length; i++) {
+            if (count1 == 0 && (nums[i] != el2)) {
+                count1 = 1;
+                el1 = nums[i];
+            } else if (count2 == 0 && (nums[i] != el1)) {
+                count2 = 1;
+                el2 = nums[i];
+            } else if (el1 == nums[i]) {
+                count1++;
+            } else if (el2 == nums[i]) {
+                count2++;
             } else {
-                map.put(num, 1);
+                count1--;
+                count2--;
             }
         }
 
-        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
-            if (entry.getValue() > (nums.length / 3)) {
-                list.add(entry.getKey());
+        count1 = 0;
+        count2 = 0;
+
+        for (int i = 0; i < nums.length; i++) {
+            if (nums[i] == el1) {
+                count1++;
             }
+            if (nums[i] == el2) {
+                count2++;
+            }
+        }
+
+        int limit = nums.length / 3;
+
+        if (count1 > limit) {
+            list.add(el1);
+        }
+        if (count2 > limit) {
+            list.add(el2);
         }
 
         return list;
@@ -84,20 +117,28 @@ class Solution {
 nums = [3,2,3]
 ```
 
-**Step 1: Build frequency map**
+**First pass (candidate selection):** `count1 = 0`, `count2 = 0`, `el1 = MIN`, `el2 = MIN`
 
-| num | map after insertion |
-|-----|----------------------|
-|3|{3:1}|
-|2|{3:1, 2:1}|
-|3|{3:2, 2:1}|
+| i | nums[i] | Condition Matched | Action | el1 | el2 | count1 | count2 |
+|---|---------|---------------------|--------|-----|-----|--------|--------|
+|0|3|count1==0 && 3≠el2|el1=3, count1=1|3|MIN|1|0|
+|1|2|count2==0 && 2≠el1(3)|el2=2, count2=1|3|2|1|1|
+|2|3|el1==nums[i] (3==3)|count1++|3|2|2|1|
 
-**Step 2: Filter entries where count > nums.length / 3 (= 3 / 3 = 1)**
+After first pass: `el1 = 3`, `el2 = 2` (candidates only — not yet verified)
 
-| Entry | Count | Count > 1? | Added to list? |
-|-------|-------|------------|------------------|
-|3|2|Yes|Yes → list = [3]|
-|2|1|No|No|
+**Second pass (verification):** Reset `count1 = 0`, `count2 = 0`
+
+| i | nums[i] | nums[i]==el1(3)? | nums[i]==el2(2)? | count1 | count2 |
+|---|---------|----------------------|----------------------|--------|--------|
+|0|3|Yes|No|1|0|
+|1|2|No|Yes|1|1|
+|2|3|Yes|No|2|1|
+
+**Final check:** `limit = nums.length / 3 = 3 / 3 = 1`
+
+- `count1 (2) > limit (1)`? Yes → `list.add(el1 = 3)`
+- `count2 (1) > limit (1)`? No → `el2` is not added
 
 Output:
 
@@ -105,42 +146,35 @@ Output:
 [3]
 ```
 
-This matches the expected output, since `3` appears twice, more than the threshold of `1`.
+This matches the expected output.
 
 ---
 
 ## Why This Approach Works
 
-By counting the exact frequency of every distinct element first, the algorithm can directly compare each frequency against the required threshold (`nums.length / 3`) without needing to guess candidates ahead of time.
+Since more than two elements can never simultaneously exceed the `n/3` threshold (a mathematical guarantee — three groups each exceeding `n/3` would already sum to more than `n`), tracking exactly two candidate/count pairs is always sufficient to capture every possible qualifying element.
 
-Filtering after the full count ensures correctness even in edge cases like `[1,2]`, where both elements individually appear only once but still exceed the threshold of `2/3 = 0`, since integer division makes the threshold `0` and any positive count qualifies.
+The cancellation step (decrementing both counts when a number matches neither candidate) mirrors the classic single-candidate Boyer-Moore logic: any element that isn't part of either dominant group "cancels out" support for both current candidates equally. However, since cancellation can occasionally produce a candidate that doesn't truly meet the threshold, the second verification pass is essential to confirm the real counts before adding elements to the result.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(n)` — one pass to build the map, one pass to filter entries
-- **Space Complexity:** `O(n)` — for storing frequencies in the HashMap
-
----
-
-## Follow-up Considerations
-
-The problem's follow-up asks for a solution in **linear time and O(1) space**. This can be achieved using the **Boyer-Moore Voting Algorithm extended to track two candidates simultaneously** (since at most two elements can exceed the `n/3` threshold), maintaining two candidate/count pairs instead of a HashMap, followed by a final verification pass to confirm each candidate truly exceeds `n/3` occurrences.
+- **Time Complexity:** `O(n)` — two linear passes through the array
+- **Space Complexity:** `O(1)` — only a fixed number of variables are used, regardless of input size
 
 ---
 
 ## Key Insight
 
-Since more than one element can exceed a `n/3` threshold (unlike the simple majority element problem, which only allows one), the HashMap approach naturally handles multiple qualifying elements without extra bookkeeping — at the cost of `O(n)` space, which the follow-up challenges you to eliminate.
+Extending the Boyer-Moore Voting Algorithm from tracking one candidate to tracking two candidates (with independent counters and cancellation) generalizes elegantly to any "more than `n/k`" threshold problem — here `k = 3` requires two candidate slots, since `k - 1` elements can potentially exceed the threshold. The mandatory verification pass afterward is what makes this approach correct, since candidate selection alone doesn't guarantee an actual majority.
 
 ---
 
 ## Concepts Used
 
 - Array
-- HashMap
-- Hashing
-- Frequency Counting
-- Boyer-Moore Voting Algorithm (optimal follow-up approach)
-- Constant Space Algorithm (follow-up)
+- Boyer-Moore Voting Algorithm (Extended)
+- Candidate Cancellation
+- Two-Pass Verification
+- Constant Space Algorithm
