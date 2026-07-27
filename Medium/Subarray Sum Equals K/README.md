@@ -1,4 +1,4 @@
-# LeetCode 560 - Subarray Sum Equals K
+# LeetCode 560 - Subarray Sum Equals K (Refined Version)
 
 ## Problem Statement
 
@@ -29,14 +29,16 @@ Output: 2
 
 ## Approach
 
-This solution uses a **running prefix sum combined with a HashMap** that tracks how many times each prefix sum has occurred.
+This is a cleaner version of the prefix-sum + HashMap technique, which removes the special-cased `if (sum == k)` check by **pre-seeding the map with the empty prefix**.
 
 ### Idea
 
-- Maintain a running `sum` as the array is traversed, representing the prefix sum from index `0` up to the current index.
-- If `sum == k` at any point, the subarray from the start of the array up to the current index sums to `k`, so increment `count` directly.
-- For every current `sum`, check whether `sum - k` (the "remainder," `rem`) has occurred as a prefix sum before. If it has, it means there exists some earlier index where the prefix sum was `rem`, so the subarray **between that earlier point and the current index** sums to exactly `k`. Add the number of times `rem` has occurred (`map.get(rem)`) to `count`, since each earlier occurrence marks a distinct valid subarray ending at the current index.
-- Finally, record the current `sum` in the map, incrementing its occurrence count for future indices to reference.
+- Before the loop starts, initialize `map.put(sum, 1)` while `sum = 0`. This represents the "empty prefix" — the idea that a prefix sum of `0` has occurred once, **before** any elements have been added. This single seed value elegantly handles the case where a subarray starting from index `0` sums exactly to `k`, without needing a separate check.
+- Maintain a running `sum` as the array is traversed.
+- At each step, compute `rem = sum - k`. If `rem` has occurred as a prefix sum before (including the seeded `0`), add its occurrence count (`map.getOrDefault(rem, 0)`) directly to `count`.
+- Record the current `sum` in the map, incrementing its occurrence count using `getOrDefault` for a concise one-line update.
+
+Because the empty-prefix case is folded into the same map lookup as every other case, the logic becomes simpler and more uniform than checking `sum == k` separately.
 
 ---
 
@@ -46,21 +48,15 @@ This solution uses a **running prefix sum combined with a HashMap** that tracks 
 class Solution {
     public int subarraySum(int[] nums, int k) {
         HashMap<Integer, Integer> map = new HashMap<>();
+
         int sum = 0;
         int count = 0;
+        map.put(sum, 1);
 
         for (int i = 0; i < nums.length; i++) {
             sum = sum + nums[i];
-
-            if (sum == k) {
-                count++;
-            }
-
             int rem = sum - k;
-            if (map.containsKey(rem)) {
-                count += map.get(rem);
-            }
-
+            count = count + map.getOrDefault(rem, 0);
             map.put(sum, map.getOrDefault(sum, 0) + 1);
         }
 
@@ -79,13 +75,13 @@ class Solution {
 nums = [1,1,1], k = 2
 ```
 
-**Initial:** `sum = 0`, `count = 0`, `map = {}`
+**Initial:** `sum = 0`, `count = 0`, `map = {0: 1}` (seeded for the empty prefix)
 
-| i | nums[i] | sum | sum==k? | rem = sum-k | map.containsKey(rem)? | count | map after step |
-|---|---------|-----|---------|--------------|---------------------------|-------|-----------------|
-|0|1|1|No|-1|No|0|{1:1}|
-|1|1|2|Yes → count++|0|No|1|{1:1, 2:1}|
-|2|1|3|No|1|Yes (map[1]=1) → count += 1|2|{1:1, 2:1, 3:1}|
+| i | nums[i] | sum | rem = sum-k | map.getOrDefault(rem, 0) | count | map after step |
+|---|---------|-----|--------------|-----------------------------|-------|-----------------|
+|0|1|1|-1|0|0|{0:1, 1:1}|
+|1|1|2|0|1 (seeded value)|1|{0:1, 1:1, 2:1}|
+|2|1|3|1|1|2|{0:1, 1:1, 2:1, 3:1}|
 
 Output:
 
@@ -93,15 +89,15 @@ Output:
 2
 ```
 
-This matches the two valid subarrays: `[1,1]` (indices 0–1) and `[1,1]` (indices 1–2).
+This matches the two valid subarrays: `[1,1]` (indices 0–1) and `[1,1]` (indices 1–2). Notice how at `i = 1`, the seeded `map[0] = 1` is what correctly credits the subarray from the very start of the array (`[1,1]`, indices 0–1) without any special-case branch.
 
 ---
 
 ## Why This Approach Works
 
-If the prefix sum up to index `j` is `S_j`, and the prefix sum up to an earlier index `i` is `S_i`, then the sum of the subarray between `i+1` and `j` is `S_j - S_i`. We want this difference to equal `k`, which rearranges to `S_i = S_j - k`.
+The relationship `S_i = S_j - k` (where `S_i` and `S_j` are prefix sums at two indices) still holds exactly as before. The only refinement here is recognizing that a subarray beginning at index `0` is just the special case where the "earlier" prefix sum is `0`, corresponding to no elements at all.
 
-So at every index, checking how many times `sum - k` has appeared before tells us exactly how many earlier starting points create a subarray ending here that sums to `k`. Storing counts (not just presence) in the map correctly handles cases where the same prefix sum occurs multiple times, since each occurrence represents a distinct valid subarray.
+By seeding `map.put(0, 1)` before the loop starts, that special case is captured naturally by the same `rem` lookup used for every other index, removing the need for a separate `if (sum == k)` branch.
 
 ---
 
@@ -114,7 +110,7 @@ So at every index, checking how many times `sum - k` has appeared before tells u
 
 ## Key Insight
 
-Instead of checking every possible subarray with nested loops (`O(n^2)`), tracking prefix sums and their frequencies lets us determine, in constant time per index, how many earlier positions would form a valid subarray summing to `k` — reducing the problem to a single linear pass.
+Seeding the map with the "empty prefix" (`sum = 0` occurring once) is a common and powerful pattern in prefix-sum problems — it unifies the handling of subarrays that start from index `0` with all other subarrays, resulting in cleaner, more symmetric code compared to handling that case separately.
 
 ---
 
@@ -125,4 +121,4 @@ Instead of checking every possible subarray with nested loops (`O(n^2)`), tracki
 - Hashing
 - Prefix Sum
 - Frequency Counting
-- Constant-Time Lookup
+- Base Case Seeding
