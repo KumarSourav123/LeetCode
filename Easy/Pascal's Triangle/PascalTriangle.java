@@ -1,3 +1,5 @@
+import java.util.*;
+
 class Solution {
     public List<List<Integer>> generate(int numRows) {
         ArrayList<List<Integer>> result = new ArrayList<>();
