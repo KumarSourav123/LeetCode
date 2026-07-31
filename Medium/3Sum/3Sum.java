@@ -7,14 +7,16 @@ class Solution {
 
         Arrays.sort(nums);
 
-        int i = 0;
-        while(i < nums.length){
+        for(int i = 0 ; i < nums.length ; i++){
+            if(i > 0 && nums[i] == nums[i-1]){
+                continue;
+            }
             int j = i+1;
             int k = nums.length-1;
             while(j < k){
-                ArrayList<Integer> list = new ArrayList<>();
                 int sum = nums[i] + nums[j] + nums[k];
                 if(sum == 0){
+                    ArrayList<Integer> list = new ArrayList<>();
                     list.add(nums[i]);
                     list.add(nums[j]);
                     list.add(nums[k]);
@@ -33,10 +35,7 @@ class Solution {
                     k--;
                 }
             }
-            i++;
-            while(i < nums.length && nums[i] == nums[i-1]){
-                i++;
-            }
+            
         }
 
         return result;
