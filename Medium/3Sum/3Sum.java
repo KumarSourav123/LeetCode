@@ -15,7 +15,11 @@ class Solution {
             int k = nums.length-1;
             while(j < k){
                 int sum = nums[i] + nums[j] + nums[k];
-                if(sum == 0){
+                if(sum < 0){
+                    j++;
+                }else if(sum > 0){
+                    k--;
+                }else{
                     ArrayList<Integer> list = new ArrayList<>();
                     list.add(nums[i]);
                     list.add(nums[j]);
@@ -29,10 +33,6 @@ class Solution {
                     while(k > j && nums[k] == nums[k+1]){
                         k--;
                     }
-                }else if(sum < 0){
-                    j++;
-                }else{
-                    k--;
                 }
             }
             
