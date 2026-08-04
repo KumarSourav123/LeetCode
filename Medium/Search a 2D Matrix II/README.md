@@ -1,4 +1,4 @@
-# LeetCode 240 - Search a 2D Matrix II
+# LeetCode 240 - Search a 2D Matrix II (Staircase Search Approach)
 
 ## Problem Statement
 
@@ -34,16 +34,19 @@ Output: false
 
 ## Approach
 
-This solution uses a **straightforward brute-force scan**, checking every single cell in the matrix for a match.
+This solution uses the classic **"staircase search"** technique, starting from the **top-right corner** of the matrix and eliminating an entire row or column with each comparison.
 
 ### Idea
 
-- Iterate through every row `i` from `0` to `matrix.length - 1`.
-- For each row, iterate through every column `j` from `0` to `matrix[i].length - 1`.
-- If `matrix[i][j] == target`, a match has been found — return `true` immediately.
-- If the entire matrix is scanned without finding a match, return `false`.
+- Start at position `row = 0` (the first row) and `col = n - 1` (the last column) — the top-right corner of the matrix.
+- While the current position stays within bounds (`row <= m && col >= 0`):
+  - Let `current = matrix[row][col]`.
+  - If `current == target`, the value has been found — return `true`.
+  - If `current < target`, every value in the current **row to the left** of this position is even smaller (since rows are sorted ascending left-to-right), so none of them can equal `target` either — move **down** to the next row (`row++`) to search larger values.
+  - If `current > target`, every value **below** this position in the current column is even larger (since columns are sorted ascending top-to-bottom), so none of them can equal `target` — move **left** to the previous column (`col--`) to search smaller values.
+- If the search runs off the matrix (`row` exceeds the last row or `col` goes below `0`) without finding a match, return `false`.
 
-This approach does **not** take advantage of the row-wise or column-wise sorted structure of the matrix at all — it simply checks every cell exhaustively, similar to searching an unsorted 2D grid.
+The key property that makes this work is starting from a corner where moving in **one direction increases values** and moving in the **other direction decreases values** — the top-right (and bottom-left) corners are the only positions with this property in a matrix sorted this way.
 
 ---
 
@@ -52,13 +55,25 @@ This approach does **not** take advantage of the row-wise or column-wise sorted 
 ```java
 class Solution {
     public boolean searchMatrix(int[][] matrix, int target) {
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[i].length; j++) {
-                if (target == matrix[i][j]) {
-                    return true;
-                }
+
+        int m = matrix.length - 1;
+        int n = matrix[0].length - 1;
+
+        int row = 0;
+        int col = matrix[0].length - 1;
+
+        while (row <= m && col >= 0) {
+            int current = matrix[row][col];
+
+            if (target == current) {
+                return true;
+            } else if (target > current) {
+                row++;
+            } else {
+                col--;
             }
         }
+
         return false;
     }
 }
@@ -78,15 +93,15 @@ matrix = [[1,4,7,11,15],
           [18,21,23,26,30]], target = 5
 ```
 
-| i | j | matrix[i][j] | target == matrix[i][j]? |
-|---|---|---------------|----------------------------|
-|0|0|1|No|
-|0|1|4|No|
-|0|2|7|No|
-|0|3|11|No|
-|0|4|15|No|
-|1|0|2|No|
-|1|1|5|**Yes → return true**|
+**Starting position:** `row = 0`, `col = 4` (top-right corner, value `15`)
+
+| row | col | current = matrix[row][col] | Comparison | Action |
+|-----|-----|-------------------------------|----------------|--------|
+|0|4|15|5 > 15? No, so 5 < 15|col-- → col=3|
+|0|3|11|5 > 11? No, so 5 < 11|col-- → col=2|
+|0|2|7|5 > 7? No, so 5 < 7|col-- → col=1|
+|0|1|4|5 > 4? Yes|row++ → row=1|
+|1|1|5|5 == 5|**Match found → return true**|
 
 Output:
 
@@ -94,26 +109,28 @@ Output:
 true
 ```
 
-This matches the expected output. (Cell `matrix[1][1] = 5` is highlighted in the problem's example diagram as well.)
+This matches the expected output, correctly locating `5` at `matrix[1][1]`.
 
 ---
 
 ## Why This Approach Works
 
-Checking every single cell is guaranteed to find `target` if it exists anywhere in the matrix, since no cell is skipped. Correctness here is trivial — the only question is efficiency, since this approach ignores the sorted row/column structure entirely.
+Starting from the top-right corner means the current row (moving leftward) contains progressively **smaller** values, while the current column (moving downward) contains progressively **larger** values. This gives a clean binary decision at every step: if the target is smaller than the current value, it can only be somewhere to the left in this row (since everything below is even larger) — so move left. If the target is larger, it can only be somewhere below in this column (since everything to the left is even smaller) — so move down.
+
+Each step eliminates either an entire row or an entire column from consideration, and since there are only `m` rows and `n` columns total, the search terminates in at most `m + n` steps.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(m × n)` — every cell may need to be checked in the worst case
-- **Space Complexity:** `O(1)` — no extra space is used beyond the loop variables
+- **Time Complexity:** `O(m + n)` — at most `m` downward moves and `n` leftward moves before the search space is exhausted
+- **Space Complexity:** `O(1)` — only a constant number of variables are used
 
 ---
 
 ## Key Insight
 
-While this brute-force approach is simple and always correct, it wastes the matrix's sorted properties entirely. A much more efficient `O(m + n)` solution exists using the **"staircase search"** technique: starting from the **top-right corner** (or bottom-left corner) of the matrix, move **left** when the current value is too large, or **down** when it's too small — since each row is sorted left-to-right and each column top-to-bottom, this eliminates an entire row or column with each comparison, avoiding the need to scan the full grid.
+Unlike a brute-force scan of every cell (`O(m × n)`), starting the search from a corner where one direction increases values and the other decreases them allows each comparison to definitively rule out an entire row or column at once — a much more efficient use of the matrix's sorted structure than checking cells individually.
 
 ---
 
@@ -121,5 +138,6 @@ While this brute-force approach is simple and always correct, it wastes the matr
 
 - Array
 - Matrix
-- Brute Force Search
-- Linear Scan
+- Staircase Search
+- Two Pointers (row/column)
+- Sorted Search Space
