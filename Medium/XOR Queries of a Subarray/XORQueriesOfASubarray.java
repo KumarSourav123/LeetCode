@@ -4,25 +4,24 @@ class Solution {
         int[] result = new int[n];
 
         for(int i = 0 ; i < n ; i++){
-            result[i] = xor1((queries[i][0]),(queries[i][1]), arr);
-        }
-        return result;       
-    }
+            int ans = 0;
+            int start = queries[i][0];
+            int end = queries[i][1];
 
-    private int xor1(int start , int end, int[] arr){
-        int result = 0;
-        if(start == end){
-            return arr[start];
+            while(start <= end){
+                if(start == end){
+                    ans = ans ^ arr[start];
+                    break;
+                }else{
+                    ans = (arr[start] ^ arr[end]) ^ ans;
+                    start++;
+                    end--;
+                }
+            }
+            result[i] = ans;            
         }
-        while(start < end){
-            result = (arr[start] ^ arr[end]) ^ result;
-            start++;
-            end--;
-        }
-        if(start == end){
-            result = result ^ arr[start];
-        }
-        return result;
+
+        return result;     
     }
 
 }
