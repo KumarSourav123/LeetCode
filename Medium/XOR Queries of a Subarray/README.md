@@ -1,4 +1,4 @@
-# LeetCode 1310 – XOR Queries of a Subarray
+# LeetCode 1310 – XOR Queries of a Subarray (Brute Force)
 
 ## Problem
 
@@ -10,100 +10,86 @@ Return an array where `answer[i]` is the XOR result for the `i-th` query.
 
 ## Concepts Used
 
-### 1. XOR Properties
+### 1. XOR (Exclusive OR)
 
-The XOR operator (`^`) has important properties.
+The XOR operator (`^`) compares two bits.
 
-| Expression         | Result                      |
-| ------------------ | --------------------------- |
-| `a ^ 0`            | `a`                         |
-| `a ^ a`            | `0`                         |
-| `a ^ b ^ a`        | `b`                         |
-| XOR is associative | `(a ^ b) ^ c = a ^ (b ^ c)` |
+| A | B | A ^ B |
+| - | - | ----- |
+| 0 | 0 | 0     |
+| 0 | 1 | 1     |
+| 1 | 0 | 1     |
+| 1 | 1 | 0     |
 
-The key property used in this problem is:
+Important properties:
 
-```text
-a ^ a = 0
-```
+* `a ^ 0 = a`
+* `a ^ a = 0`
+* XOR is **commutative**
+* XOR is **associative**
 
-This allows repeated prefixes to cancel out.
+### 2. Accumulating XOR
 
-### 2. Prefix XOR
-
-A prefix XOR array stores the XOR of all elements from the beginning up to index `i`.
-
-```text
-prefix[i] = arr[0] ^ arr[1] ^ ... ^ arr[i]
-```
-
-Once the prefix array is built, every range XOR query can be answered in **O(1)** time.
-
-### 3. Range XOR Formula
-
-For a query `[L, R]`:
-
-If `L = 0`
+To find the XOR of a range:
 
 ```text
-XOR(L,R) = prefix[R]
+arr[L] ^ arr[L+1] ^ ... ^ arr[R]
 ```
 
-Otherwise
+We continuously XOR each element with the current answer.
 
-```text
-XOR(L,R) = prefix[R] ^ prefix[L-1]
-```
+### 3. Two-Pointer Traversal
 
-This works because the common prefix cancels out.
+The brute-force solution uses two pointers:
 
-```text
-prefix[R]
-= arr[0] ^ arr[1] ^ ... ^ arr[L-1] ^ arr[L] ... arr[R]
+* `start`
+* `end`
 
-prefix[L-1]
-= arr[0] ^ arr[1] ^ ... ^ arr[L-1]
-
-XORing both:
-
-prefix[R] ^ prefix[L-1]
-
-= arr[L] ^ arr[L+1] ... arr[R]
-```
+It XORs elements from both ends of the subarray and moves inward until the pointers meet.
 
 ## Idea
 
-Instead of calculating XOR separately for every query:
+For every query:
 
-1. Build a **prefix XOR array**.
-2. Use the prefix XOR formula to answer each query in **constant time**.
+1. Initialize `ans = 0`.
+2. Set:
 
-This is much faster than traversing the subarray for every query.
+   * `start = left`
+   * `end = right`
+3. XOR elements from both ends.
+4. Move:
 
-## Optimized Java Solution
+   * `start++`
+   * `end--`
+5. If both pointers meet, XOR the middle element.
+
+Store the result for each query.
+
+## Java Solution
 
 ```java
 class Solution {
     public int[] xorQueries(int[] arr, int[][] queries) {
-        int n = arr.length;
+        int n = queries.length;
+        int[] result = new int[n];
 
-        int[] prefix = new int[n];
-        prefix[0] = arr[0];
+        for (int i = 0; i < n; i++) {
+            int ans = 0;
+            int start = queries[i][0];
+            int end = queries[i][1];
 
-        for (int i = 1; i < n; i++) {
-            prefix[i] = prefix[i - 1] ^ arr[i];
-        }
+            while (start <= end) {
+                if (start == end) {
+                    ans = ans ^ arr[start];
+                    break;
+                } else {
+                    ans = (arr[start] ^ arr[end]) ^ ans;
+                    start++;
+                    end--;
+                }
+            }
 
-        int[] result = new int[queries.length];
-
-        for (int i = 0; i < queries.length; i++) {
-            int left = queries[i][0];
-            int right = queries[i][1];
-
-            if (left == 0)
-                result[i] = prefix[right];
-            else
-                result[i] = prefix[right] ^ prefix[left - 1];
+            result[i] = ans;
         }
 
         return result;
@@ -117,142 +103,125 @@ Example:
 
 ```text
 arr = [1,3,4,8]
-queries = [[0,1],[1,2],[0,3],[3,3]]
+queries = [[1,2]]
 ```
 
-Build prefix XOR:
-
-| Index | Value | Prefix XOR |
-| ----- | ----- | ---------- |
-| 0     | 1     | 1          |
-| 1     | 3     | 1 ^ 3 = 2  |
-| 2     | 4     | 2 ^ 4 = 6  |
-| 3     | 8     | 6 ^ 8 = 14 |
-
-So
+Query:
 
 ```text
-prefix = [1,2,6,14]
+left = 1
+right = 2
 ```
 
-### Query 1: [0,1]
+Initial:
 
 ```text
-Answer = prefix[1]
-       = 2
+start = 1
+end = 2
+ans = 0
 ```
 
-### Query 2: [1,2]
+Iteration 1:
 
 ```text
-Answer = prefix[2] ^ prefix[0]
-       = 6 ^ 1
-       = 7
+ans = (arr[1] ^ arr[2]) ^ ans
+    = (3 ^ 4) ^ 0
+    = 7
 ```
 
-### Query 3: [0,3]
+Move pointers:
 
 ```text
-Answer = prefix[3]
-       = 14
+start = 2
+end = 1
 ```
 
-### Query 4: [3,3]
+Loop ends.
+
+Final answer:
 
 ```text
-Answer = prefix[3] ^ prefix[2]
-       = 14 ^ 6
-       = 8
+7
+```
+
+## Another Example
+
+```text
+arr = [1,3,4,8]
+query = [0,3]
+```
+
+Step 1:
+
+```text
+ans = (1 ^ 8)
+    = 9
+```
+
+Step 2:
+
+```text
+ans = (3 ^ 4) ^ 9
+    = 7 ^ 9
+    = 14
 ```
 
 Final answer:
 
 ```text
-[2,7,14,8]
+14
 ```
-
-## Why the Prefix XOR Formula Works
-
-Suppose
-
-```text
-arr = [a,b,c,d,e]
-```
-
-Then
-
-```text
-prefix[4] = a ^ b ^ c ^ d ^ e
-prefix[1] = a ^ b
-```
-
-Now
-
-```text
-prefix[4] ^ prefix[1]
-
-= (a ^ b ^ c ^ d ^ e) ^ (a ^ b)
-
-= c ^ d ^ e
-```
-
-because
-
-```text
-a ^ a = 0
-b ^ b = 0
-```
-
-So the prefix before the left boundary is removed.
 
 ## Time Complexity
 
-### Prefix XOR Construction
+For each query:
 
-* **O(n)**
+* Traverse the subarray.
+* Worst case: **O(n)**
 
-### Answering Queries
+For `q` queries:
 
-* **O(q)**
-
-Total:
-
-* **O(n + q)**
+* **O(n × q)**
 
 ## Space Complexity
 
-* Prefix array: **O(n)**
 * Result array: **O(q)**
+* Extra variables: **O(1)**
 
-Extra space excluding the output array:
+Extra space excluding output:
 
-* **O(n)**
+* **O(1)**
+
+## Why This Solution Can Be Slow
+
+If:
+
+* `n = 30,000`
+* `q = 30,000`
+
+Worst-case operations become:
+
+```text
+O(n × q)
+= 30,000 × 30,000
+= 9 × 10^8
+```
+
+This may exceed the time limit.
+
+An optimized solution uses **Prefix XOR**, which answers each query in **O(1)** after **O(n)** preprocessing.
 
 ## Pattern Recognition
 
 This problem belongs to:
 
-* **Prefix XOR**
-* **Range Query**
 * **Bit Manipulation**
-* **Prefix Array Technique**
+* **XOR**
+* **Range Query**
+* **Array Traversal**
 
 ## Interview Takeaway
 
-Whenever a problem asks for:
+The brute-force approach is useful for understanding XOR operations.
 
-* XOR of a subarray,
-* multiple range XOR queries,
-* efficient repeated XOR calculations,
-
-think of **Prefix XOR**.
-
-The most important formula is:
-
-```text
-XOR(L,R)
-
-= prefix[R] ^ prefix[L-1]
-```
-
-This reduces each query from **O(length of subarray)** to **O(1)**, making it one of the most important XOR range-query patterns for coding interviews.
+However, when a problem contains **multiple range XOR queries**, think about **Prefix XOR**, because it reduces the complexity from **O(n × q)** to **O(n + q)**.
