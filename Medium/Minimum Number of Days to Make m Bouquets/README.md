@@ -64,7 +64,7 @@ This solution uses **binary search on the answer**, searching over possible "wai
 class Solution {
     public int minDays(int[] bloomDay, int m, int k) {
 
-        if ((long) k * m > bloomDay.length) {
+        if((long) k * m > bloomDay.length){
             return -1;
         }
 
@@ -72,36 +72,36 @@ class Solution {
         int high = Integer.MIN_VALUE;
         int ans = 0;
 
-        for (int bloom : bloomDay) {
+        for(int bloom : bloomDay){
             low = Math.min(low, bloom);
             high = Math.max(high, bloom);
         }
 
-        while (low <= high) {
-            int mid = low + (high - low) / 2;
+        while(low <= high){
+            int mid = low + (high-low)/2;
             int result = bouquet(bloomDay, mid, k);
 
-            if (result >= m) {
+            if(result >= m){
                 ans = mid;
-                high = mid - 1;
-            } else {
-                low = mid + 1;
+                high = mid-1;
+            }else{
+                low = mid+1;
             }
         }
         return ans;
     }
 
-    private int bouquet(int[] arr, int mid, int k) {
+    private int bouquet(int[] arr, int mid, int k){
         int count = 0;
         int day = 0;
-        for (int i = 0; i < arr.length; i++) {
-            if (Math.ceil((double) arr[i] / mid) == 1) {
+        for(int i = 0 ; i < arr.length ; i++){
+            if(arr[i] <= mid){
                 count++;
-            } else {
-                count = 0;
-            }
-            if (count == k) {
-                day++;
+                if(count == k){
+                    day++;
+                    count = 0;
+                }
+            }else{
                 count = 0;
             }
         }
