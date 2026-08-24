@@ -32,13 +32,13 @@ class Solution {
         int count = 0;
         int day = 0;
         for(int i = 0 ; i < arr.length ; i++){
-            if(Math.ceil((double)arr[i]/mid) == 1){
+            if(arr[i] <= mid){
                 count++;
+                if(count == k){
+                    day++;
+                    count = 0;
+                }
             }else{
-                count = 0;
-            }
-            if(count == k){
-                day++;
                 count = 0;
             }
         }
