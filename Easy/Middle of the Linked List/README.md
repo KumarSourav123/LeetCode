@@ -4,7 +4,7 @@
 
 Given the `head` of a singly linked list, return *the middle node of the linked list*.
 
-If there are two middle nodes, return **the second middle node**.
+If there are two middle nodes, return **the second middle** node.
 
 ---
 
@@ -30,15 +30,17 @@ Explanation: Since the list has two middle nodes with values 3 and 4, we return 
 
 ## Approach
 
-This solution uses a **two-pass** technique: first counting the total number of nodes, then walking forward exactly half that many steps to land on the middle node.
+This solution uses the standard **slow/fast pointer** technique: `slow` advances one node at a time while `fast` advances two nodes at a time, so by the time `fast` reaches the end of the list, `slow` has covered exactly half the distance and is sitting on the middle node.
 
 ### Idea
 
-- **First pass — count the size:** traverse the entire list with a `temp` pointer, incrementing a `size` counter for each node visited, until `temp` reaches `null`. This gives the total number of nodes in the list.
-- **Second pass — walk to the middle:** starting `current` back at `head`, advance it `size / 2` times.
-  - For an **odd** total size (e.g., `5` nodes), `size / 2 = 2` (integer division), which correctly lands on the 3rd node (0-indexed position `2`) — the true middle.
-  - For an **even** total size (e.g., `6` nodes), `size / 2 = 3`, which lands on the 4th node — the **second** of the two middle nodes, exactly as the problem requires.
-- Return `current`, now pointing at the correct middle node.
+- Start both `slow` and `fast` at `head`.
+- **Loop** `while(fast != null && fast.next != null)`:
+  - `slow = slow.next` — advance `slow` one step.
+  - `fast = fast.next.next` — advance `fast` two steps.
+- The loop condition is what naturally produces the "second middle node" behavior for even-length lists: it only keeps running as long as `fast` has **two** more nodes to consume. For an even-length list, `fast` runs out of a full pair of steps exactly when `slow` has reached the *second* of the two middle nodes, at which point the loop stops.
+- Once the loop exits (`fast` is `null`, or `fast.next` is `null`), `slow` is sitting on the correct middle node.
+- Return `slow`.
 
 ---
 
@@ -47,17 +49,15 @@ This solution uses a **two-pass** technique: first counting the total number of 
 ```java
 class Solution {
     public ListNode middleNode(ListNode head) {
-        int size = 0;
-        ListNode temp = head;
-        while (temp != null) {
-            size++;
-            temp = temp.next;
+        ListNode slow = head;
+        ListNode fast = head;
+
+        while(fast != null && fast.next != null){
+            slow = slow.next;
+            fast = fast.next.next;
         }
-        ListNode current = head;
-        for (int i = 1; i <= size / 2; i++) {
-            current = current.next;
-        }
-        return current;
+
+        return slow;
     }
 }
 ```
@@ -69,33 +69,35 @@ class Solution {
 ### Input
 
 ```text
-head = [1,2,3,4,5,6]
+head = [1,2,3,4,5,6]   (n1 -> n2 -> n3 -> n4 -> n5 -> n6 -> null)
 ```
 
-**First pass — count size:**
+`slow = n1`, `fast = n1`
 
-| temp | size after |
-|------|------------|
-|node1|1|
-|node2|2|
-|node3|3|
-|node4|4|
-|node5|5|
-|node6|6|
+**Iteration 1:** `fast(n1) != null` and `fast.next(n2) != null` → loop runs
 
-`temp` becomes `null` after node6 → loop exits. `size = 6`
+| Step | Action | Result |
+|------|--------|--------|
+|slow = slow.next|n1.next = n2|slow = n2|
+|fast = fast.next.next|n1.next.next = n3|fast = n3|
 
-**Second pass — walk `size / 2 = 3` steps from `head`:**
+**Iteration 2:** `fast(n3) != null` and `fast.next(n4) != null` → loop runs
 
-| i | current before | current after (current = current.next) |
-|---|--------------------|----------------------------------------------|
-|1|node1|node2|
-|2|node2|node3|
-|3|node3|node4|
+| Step | Action | Result |
+|------|--------|--------|
+|slow = slow.next|n2.next = n3|slow = n3|
+|fast = fast.next.next|n3.next.next = n5|fast = n5|
 
-Loop ends (`i` exceeds `3`). `current = node4`
+**Iteration 3:** `fast(n5) != null` and `fast.next(n6) != null` → loop runs
 
-**Return:** `node4`, representing the sublist `[4,5,6]`
+| Step | Action | Result |
+|------|--------|--------|
+|slow = slow.next|n3.next = n4|slow = n4|
+|fast = fast.next.next|n5.next.next = n6.next = null|fast = null|
+
+**Loop check:** `fast == null` → loop exits.
+
+**Return:** `slow` (n4), traversing: `4 -> 5 -> 6 -> null`
 
 Output:
 
@@ -103,32 +105,34 @@ Output:
 [4,5,6]
 ```
 
-This matches the expected output — with two middle nodes (`3` and `4`), the second one (`4`) is correctly returned.
+This matches the expected output — since the list has two middle nodes (values 3 and 4), the second one (4) is correctly returned.
 
 ---
 
 ## Why This Approach Works
 
-Once the exact `size` of the list is known, the middle index can be computed directly using integer division. Walking exactly `size / 2` steps from the head always lands on the correct node: for odd-length lists, this is the unambiguous single middle node; for even-length lists, integer division naturally rounds this index toward the **later** of the two middle positions, which is exactly the "second middle node" the problem asks for — no special-case branching between odd and even lengths is needed.
+Since `fast` always moves exactly twice as fast as `slow`, whenever `fast` finishes traversing the list, `slow` has covered exactly half the distance. The precise way the loop condition is written (`fast != null && fast.next != null`) is what determines *which* middle node gets returned when the list has two: the loop keeps going as long as there are two more nodes left for `fast` to consume, so on an even-length list it runs one extra half-step compared to what would leave `slow` on the first middle node — landing it on the second middle node instead, exactly as the problem requires.
+
+For an odd-length list, `fast` naturally lands exactly on the last node (`fast.next == null` stops the loop), and `slow` has landed precisely on the single true middle node.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(n)` — two full passes through the list (counting, then walking)
-- **Space Complexity:** `O(1)` — only a constant number of pointer/counter variables are used
+- **Time Complexity:** `O(n)` — `fast` traverses the list once (two nodes per iteration), so the loop runs roughly `n/2` times
+- **Space Complexity:** `O(1)` — only two pointer variables are used, no new nodes or auxiliary data structures
 
 ---
 
 ## Key Insight
 
-While this two-pass approach is simple and correct, the more commonly taught approach for this exact problem is the **fast and slow pointer** technique (the same core idea as Floyd's Cycle Detection): advancing `slow` one step and `fast` two steps simultaneously in a **single pass** — when `fast` reaches the end, `slow` is naturally sitting at the middle. That approach achieves the same result without needing to know the list's length upfront, avoiding the two separate traversals used here.
+The slow/fast (or "tortoise and hare") pointer pattern is the standard way to find a linked list's midpoint in a single pass without first counting its length — and the exact loop condition chosen (`fast != null && fast.next != null` vs. a stricter variant) is what decides, without any extra branching, whether the first or second of two middle nodes is returned on even-length lists.
 
 ---
 
 ## Concepts Used
 
 - Linked List
-- Two-Pass Traversal
-- Integer Division for Midpoint Calculation
-- Fast & Slow Pointers (alternative single-pass approach)
+- Two Pointers (Slow & Fast)
+- Single-Pass Traversal
+- Constant Space Algorithm
