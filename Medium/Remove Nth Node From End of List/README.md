@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Given the `head` of a linked list, remove the `n`th node from the end of the list and return its head.
+Given the `head` of a linked list, remove the `nth` node from the end of the list and return its head.
 
 ---
 
@@ -30,25 +30,22 @@ Output: [1]
 - `0 <= Node.val <= 100`
 - `1 <= n <= sz`
 
-## Follow up:
-Could you do this in one pass?
+**Follow up:** Could you do this in one pass?
 
 ---
 
 ## Approach
 
-This solution uses a **two-pass counting technique**: first measuring the total list length, then converting "nth from the end" into a straightforward "kth from the start" position to remove.
+This solution uses the classic **two-pointer gap technique**: push `fast` exactly `n` nodes ahead of `slow` first, then advance both together — by the time `fast` reaches the end, `slow` is sitting right before the node that needs to be removed.
 
 ### Idea
 
-- **Edge case first:** if `head.next == null`, the list has exactly one node, and since the constraints guarantee `n` is always valid, removing that single node means the whole list becomes empty — set `head = null` and return immediately.
-- **First pass — measure the list:** traverse with a `temp` pointer, counting the total number of nodes into `size`.
-- **Convert to a forward position:** the node to remove, counted from the end, is at forward position `size - n` (0-indexed) from the head. Update `size = size - n` to represent this forward step count.
-- **Second pass — walk to the target node:** starting `current` at `head` and `prev` at `null`, advance both together for `size` steps: at each step, set `prev = current` before moving `current = current.next`. After the loop, `current` points to the node that needs to be removed, and `prev` points to the node just before it.
-- **Perform the removal:**
-  - If `current == head` (the node to remove happens to be the head itself — this occurs when `size` ended up being `0`), update `head = current.next` to skip it.
-  - Otherwise, if `prev` is not `null`, relink around `current`: `prev.next = current.next`, then clear `current.next = null` for cleanliness (detaching the removed node fully).
-- Return `head`.
+- Start both `fast` and `slow` at `head`.
+- **Open the gap:** run a `for` loop `n` times, moving `fast = fast.next` each iteration. After this, `fast` is exactly `n` nodes ahead of `slow`.
+- **Handle the head-removal edge case:** if `fast` is now `null`, that means `n` equals the total list length — the node to remove is the **head itself**. In that case, return `head.next` directly (skipping the old head) without touching `slow`/`fast` any further.
+- **Advance together:** otherwise, `while(fast.next != null)`, move both `fast = fast.next` and `slow = slow.next` one step at a time. Because the `n`-node gap between them stays constant, when `fast` reaches the **last** node of the list (`fast.next == null`), `slow` has landed exactly on the node **just before** the one to be removed.
+- **Remove the target node:** `slow.next = slow.next.next` skips over `slow.next` (the nth-from-end node), unlinking it from the list.
+- Return `head` (unchanged, since only an interior/tail node was removed).
 
 ---
 
@@ -57,38 +54,24 @@ This solution uses a **two-pass counting technique**: first measuring the total 
 ```java
 class Solution {
     public ListNode removeNthFromEnd(ListNode head, int n) {
-        if (head.next == null) {
-            head = null;
-            return head;
+
+        ListNode fast = head;
+        ListNode slow = head;
+
+        for(int i = 1 ; i <= n ; i++){
+            fast = fast.next;
         }
 
-        ListNode temp = head;
-        int size = 0;
-        while (temp != null) {
-            size++;
-            temp = temp.next;
+        if(fast == null){
+            return head.next;
         }
 
-        size = size - n;
-
-        ListNode current = head;
-        ListNode prev = null;
-
-        for (int i = 1; i <= size; i++) {
-            prev = current;
-            current = current.next;
+        while(fast.next != null){
+            fast = fast.next;
+            slow = slow.next;
         }
 
-        if (current == head) {
-            head = current.next;
-        }
-
-        if (prev != null) {
-            prev.next = current.next;
-            current.next = null;
-        } else {
-            current.next = null;
-        }
+        slow.next = slow.next.next;
 
         return head;
     }
@@ -102,36 +85,51 @@ class Solution {
 ### Input
 
 ```text
-head = [1,2,3,4,5], n = 2
+head = [1,2,3,4,5]   (n1 -> n2 -> n3 -> n4 -> n5 -> null)
+n = 2
 ```
 
-`head.next != null` (node2 exists) → skip early-return case.
+`fast = n1`, `slow = n1`
 
-**First pass — measure size:**
+### Phase 1 — Open the gap
 
-Traversing `1 -> 2 -> 3 -> 4 -> 5 -> null` counts `size = 5`.
+| i | Condition (`i <= n`) | Action | fast |
+|---|------------------------|--------|------|
+|1|1 <= 2 → true|`fast = fast.next`|n2|
+|2|2 <= 2 → true|`fast = fast.next`|n3|
+|3|3 <= 2 → false|loop exits|—|
 
-**Convert to forward position:** `size = size - n = 5 - 2 = 3`
+State: `fast = n3`, `slow = n1` (gap of 2 nodes between them)
 
-**Second pass — walk 3 steps from head:**
+### Phase 2 — Head-removal check
 
-`current = node1`, `prev = null`
+`fast == null`? `fast = n3`, not null → skip, continue to the main loop.
 
-| i | prev = current | current = current.next |
-|---|----------------------|------------------------------|
-|1|prev = node1|current = node2|
-|2|prev = node2|current = node3|
-|3|prev = node3|current = node4|
+### Phase 3 — Advance together
 
-Loop ends. `current = node4` (the node to remove), `prev = node3`
+**Iteration 1:** `fast.next (n3.next = n4) != null` → runs
 
-**Removal:**
+| Step | Action | Result |
+|------|--------|--------|
+|fast = fast.next|fast = n4|—|
+|slow = slow.next|slow = n2|—|
 
-`current == head`? `node4 == node1`? No → skip head-reassignment case.
+**Iteration 2:** `fast.next (n4.next = n5) != null` → runs
 
-`prev != null`? Yes → `prev.next = current.next` → `node3.next = node5` (skipping node4). `current.next = null` (detaching node4 fully).
+| Step | Action | Result |
+|------|--------|--------|
+|fast = fast.next|fast = n5|—|
+|slow = slow.next|slow = n3|—|
 
-**Return:** `head` (node1), traversing: `1 -> 2 -> 3 -> 5 -> null`
+**Loop check:** `fast.next (n5.next)` is `null` → loop exits.
+
+State: `fast = n5` (the last node), `slow = n3` (the node just before the target)
+
+### Phase 4 — Remove the target node
+
+`slow.next = slow.next.next` → `slow.next` is `n4`, and `n4.next` is `n5`, so `n3.next = n5` — `n4` is unlinked.
+
+**Return:** `head` (n1), traversing: `1 -> 2 -> 3 -> 5 -> null`
 
 Output:
 
@@ -139,40 +137,34 @@ Output:
 [1,2,3,5]
 ```
 
-This matches the expected output — the 2nd node from the end (`4`) was correctly removed.
+This matches the expected output (the node with value 4, the 2nd from the end, was removed).
 
 ---
 
 ## Why This Approach Works
 
-Knowing the total list length converts the awkward "count from the end" requirement into a simple, direct "count from the start" position — specifically, the node to remove sits at forward index `size - n` (0-indexed) from the head, since there are exactly `n` nodes after it (including itself) when counted from the tail.
+The key relationship this approach relies on is: if `fast` is `n` nodes ahead of `slow`, then the moment `fast` reaches the **last** node of the list, `slow` must be exactly `n` nodes behind the last node — which is precisely one node before the nth-from-end node. Maintaining a fixed gap while advancing both pointers together is what makes this land correctly without ever needing to know the list's total length up front.
 
-Tracking `prev` alongside `current` during the walk ensures that once `current` reaches the target node, there's already a reference to the node right before it, ready to be relinked — without needing a separate lookup or a third traversal.
+The `if(fast == null)` check after opening the gap is what makes the head-removal case safe: if `n` equals the list's length, `fast` runs completely off the end while opening the gap (before the main loop even starts), and there is no "node before the head" to land `slow` on — so that case is handled separately by simply returning `head.next`.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(n)`, more precisely `O(sz)` — two passes through the list, each proportional to its length
-- **Space Complexity:** `O(1)` — only a constant number of pointer/counter variables are used
-
----
-
-## Follow-up Considerations
-
-The follow-up asks whether this can be done in **one pass** — this two-pass approach doesn't satisfy that, but a well-known **one-pass technique using two pointers with a gap of `n`** does: advance a `fast` pointer `n` steps ahead first, then move both `slow` and `fast` together until `fast` reaches the end. At that point, `slow` sits exactly at the node before the one that needs removal — achieving the same result without first needing to know the list's total length.
+- **Time Complexity:** `O(sz)` — a single pass to open the `n`-node gap plus a second pass advancing both pointers together, each bounded by the list length, so `O(n) + O(sz - n) = O(sz)` overall. This satisfies the one-pass follow-up in spirit, since the list is only ever traversed once end-to-end (the gap-opening and the joint advance together cover each node exactly once).
+- **Space Complexity:** `O(1)` — only a fixed set of pointer variables is used, no new nodes or auxiliary data structures
 
 ---
 
 ## Key Insight
 
-While measuring the list length first is intuitive and easy to reason about, it requires two full traversals. The more elegant `O(n)`-single-pass solution recognizes that maintaining a fixed **gap of `n` nodes** between two pointers achieves the same "n-th from the end" positioning implicitly, without ever needing to know the list's total size upfront.
+Maintaining a **fixed-size gap** between two pointers is a reusable pattern any time a linked list problem is phrased in terms of distance "from the end" — since a singly linked list can't be walked backward, converting "n from the end" into "n ahead of another pointer, both moving together" turns an otherwise two-pass problem (count the list, then walk to `length - n`) into a single traversal.
 
 ---
 
 ## Concepts Used
 
 - Linked List
-- Two-Pass Traversal
-- Node Removal via Relinking
-- Two Pointers with a Gap (alternative one-pass approach)
+- Two Pointers (Fixed Gap)
+- Edge Case Handling (Removing the Head)
+- Constant Space Algorithm
