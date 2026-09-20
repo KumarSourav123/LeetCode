@@ -41,18 +41,17 @@ Node 0 with value 2 is the only node remaining after removing node 1.
 
 ## Approach
 
-This solution uses the **slow/fast pointer** technique with one twist: an extra `dummy` pointer trails one step *behind* `slow` throughout the traversal, so it's already sitting on the node just before the middle by the time the middle is found — exactly what's needed to unlink it.
+This solution uses the **slow/fast pointer** technique with a deliberate head start for `fast`: instead of starting both pointers at `head`, `fast` is launched two nodes ahead from the beginning (`head.next.next`). This offset means `slow` naturally ends up parked one node *before* the middle once the loop finishes, so the middle node can be unlinked directly via `slow.next = slow.next.next` — no separate trailing/dummy pointer needed.
 
 ### Idea
 
 - **Edge case:** if the list is empty or has only one node, deleting the middle leaves nothing behind, so return `null` directly.
-- Start `slow = head`, `fast = head`, and `dummy = null` (it will be assigned before `slow` ever moves).
+- Start `slow = head` and `fast = head.next.next` — `fast` begins two steps ahead of `slow` from the very first comparison.
 - **Loop** `while(fast != null && fast.next != null)`:
-  - `dummy = slow` — before advancing `slow`, save its *current* position. This means `dummy` always trails exactly one step behind wherever `slow` is about to move to.
   - `slow = slow.next` — advance `slow` one step.
   - `fast = fast.next.next` — advance `fast` two steps.
-- By the same slow/fast logic used to find a list's midpoint, the loop stops with `slow` sitting on the middle node — and, because of how `dummy` was updated just before each `slow` move, `dummy` is left sitting exactly one node **before** `slow`.
-- **Unlink the middle node:** `dummy.next = slow.next` skips over `slow` (the middle node), removing it from the list.
+- Because `fast` starts two nodes ahead and both then advance at the usual 1x/2x rates, the gap between `slow` and the true middle node stays exactly one node throughout — so when the loop stops, `slow` is sitting one node **before** the middle, rather than on it.
+- **Unlink the middle node directly:** `slow.next = slow.next.next` skips over `slow.next` (the middle node), removing it from the list — no extra pointer was needed to track the predecessor, since the head-start baked that offset in from the start.
 - Return `head` (unchanged, since only an interior node was removed).
 
 ---
@@ -67,16 +66,14 @@ class Solution {
         }
 
         ListNode slow = head;
-        ListNode fast = head;
-        ListNode dummy = null;
+        ListNode fast = head.next.next;
 
         while(fast != null && fast.next != null){
-            dummy = slow;
             slow = slow.next;
             fast = fast.next.next;
         }
 
-        dummy.next = slow.next;
+        slow.next = slow.next.next;
 
         return head;
     }
@@ -93,37 +90,27 @@ class Solution {
 head = [1,3,4,7,1,2,6]   (n0(1) -> n1(3) -> n2(4) -> n3(7) -> n4(1) -> n5(2) -> n6(6) -> null)
 ```
 
-`head != null` and `head.next != null` → proceed. `slow = n0`, `fast = n0`, `dummy = null`
+`head != null` and `head.next != null` → proceed. `slow = n0`, `fast = head.next.next = n2` (already two steps ahead)
 
-**Iteration 1:** `fast(n0) != null` and `fast.next(n1) != null` → loop runs
+**Iteration 1:** `fast(n2) != null` and `fast.next(n3) != null` → loop runs
 
 | Step | Action | Result |
 |------|--------|--------|
-|dummy = slow|dummy = n0|—|
 |slow = slow.next|slow = n1|—|
-|fast = fast.next.next|fast = n2|—|
-
-**Iteration 2:** `fast(n2) != null` and `fast.next(n3) != null` → loop runs
-
-| Step | Action | Result |
-|------|--------|--------|
-|dummy = slow|dummy = n1|—|
-|slow = slow.next|slow = n2|—|
 |fast = fast.next.next|fast = n4|—|
 
-**Iteration 3:** `fast(n4) != null` and `fast.next(n5) != null` → loop runs
+**Iteration 2:** `fast(n4) != null` and `fast.next(n5) != null` → loop runs
 
 | Step | Action | Result |
 |------|--------|--------|
-|dummy = slow|dummy = n2|—|
-|slow = slow.next|slow = n3|—|
+|slow = slow.next|slow = n2|—|
 |fast = fast.next.next|fast = n6|—|
 
-**Iteration 4 check:** `fast(n6) != null` → true, but `fast.next(n6.next)` is `null` → loop condition fails, loop exits.
+**Loop check:** `fast(n6) != null` → true, but `fast.next(n6.next)` is `null` → loop condition fails, loop exits.
 
-State: `dummy = n2`, `slow = n3` (the middle node, value 7)
+State: `slow = n2` (the node just before the middle node, n3)
 
-**Unlink the middle node:** `dummy.next = slow.next` → `n2.next = n3.next = n4`, so `n2.next = n4`, removing `n3`
+**Unlink the middle node:** `slow.next = slow.next.next` → `n2.next = n3.next = n4`, so `n2.next = n4`, removing `n3` (value 7)
 
 **Return:** `head` (n0), traversing: `1 -> 3 -> 4 -> 1 -> 2 -> 6 -> null`
 
@@ -139,29 +126,28 @@ This matches the expected output.
 
 ## Why This Approach Works
 
-The standard slow/fast pattern (`slow` moves 1, `fast` moves 2) guarantees `slow` lands on the middle node once `fast` reaches or passes the end — this is the same relationship used to find a list's midpoint in a single pass. The extra `dummy` pointer piggybacks on that same traversal: since it's always assigned to `slow`'s value *before* `slow` advances, it's perpetually one step behind — so the moment `slow` reaches the middle, `dummy` is already correctly positioned at the node just before it, with no second pass needed to re-find that predecessor.
+In the standard slow/fast midpoint pattern (both starting at `head`), `slow` ends up exactly *on* the middle node when `fast` runs out of room. Here, `fast` is deliberately launched two nodes ahead of where it would normally start — which is equivalent to running the loop one extra "virtual" iteration's worth of head start for `fast` alone, without `slow` getting that same head start. The effect is that `slow` consistently lags one node behind where it would have landed in the standard version — i.e., one node before the true middle — for every possible list length.
 
-Deleting a node from a singly linked list requires access to its **predecessor** (to rewire `.next`), which is exactly the gap that a single slow/fast pass alone wouldn't naturally provide — `dummy` is what closes that gap for free during the same traversal.
+That one-node offset is exactly what's needed to delete the middle node in a singly linked list, since deletion requires access to the **predecessor** of the target node. By baking the offset into `fast`'s starting position, the predecessor falls directly out of the same single pass that finds the middle — no second traversal, and no extra pointer needed to separately track "one step behind."
 
 ---
 
 ## Complexity Analysis
 
 - **Time Complexity:** `O(n)` — a single pass through the list; `fast` advances two nodes per iteration, so the loop runs roughly `n/2` times
-- **Space Complexity:** `O(1)` — only three pointer variables are used, no new nodes or auxiliary data structures
+- **Space Complexity:** `O(1)` — only two pointer variables are used, no new nodes or auxiliary data structures
 
 ---
 
 ## Key Insight
 
-Whenever a linked list problem needs both "the target node" and "the node right before it" (as almost any deletion does), a slow/fast traversal can be adapted to track both simultaneously by maintaining a trailing pointer that's updated to the previous position *before* the main pointer advances — avoiding the need for a separate lookup or a second pass to re-find the predecessor.
+Rather than tracking a separate trailing/predecessor pointer during a slow/fast traversal, deliberately offsetting where the fast pointer *starts* can shift what the slow pointer lands on by exactly the amount needed — here, turning "find the middle" into "find the node right before the middle" for free, since deletion only ever needs the predecessor, never the target node itself.
 
 ---
 
 ## Concepts Used
 
 - Linked List
-- Two Pointers (Slow & Fast)
-- Trailing/Predecessor Pointer Tracking
+- Two Pointers (Slow & Fast, with an Offset Start)
 - Node Deletion
 - Constant Space Algorithm
