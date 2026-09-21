@@ -4,56 +4,21 @@
 
 Given the `head` of a linked list, rotate the list to the right by `k` places.
 
-A right rotation by one place means the last node becomes the first node.
-
 ---
 
-## Example 1
+## Example 1:
+```
+Input: head = [1,2,3,4,5], k = 2
+Output: [4,5,1,2,3]
+```
 
-Input: `head = [1,2,3,4,5], k = 2`
+## Example 2:
+```
+Input: head = [0,1,2], k = 4
+Output: [2,0,1]
+```
 
-Output: `[4,5,1,2,3]`
-
-Explanation:
-
-Original list:
-
-`1 → 2 → 3 → 4 → 5 → null`
-
-After rotate 1:
-
-`5 → 1 → 2 → 3 → 4 → null`
-
-After rotate 2:
-
-`4 → 5 → 1 → 2 → 3 → null`
-
----
-
-## Example 2
-
-Input: `head = [0,1,2], k = 4`
-
-Output: `[2,0,1]`
-
-Explanation:
-
-The list contains 3 nodes, so rotating by 4 is the same as rotating by:
-
-`4 % 3 = 1`
-
-Therefore:
-
-`0 → 1 → 2`
-
-After 1 rotation:
-
-`2 → 0 → 1`
-
----
-
-## Constraints
-
+## Constraints:
 - The number of nodes in the list is in the range `[0, 500]`.
 - `-100 <= Node.val <= 100`
 - `0 <= k <= 2 * 10^9`
@@ -62,337 +27,174 @@ After 1 rotation:
 
 ## Approach
 
-The main idea is to find the point where the list should be rotated.
+This solution finds the list's length up front, reduces `k` modulo that length to eliminate redundant full rotations, then locates the new **break point** using a `for` loop offset followed by a slow/fast walk to the tail — and finally splices the list into its rotated form by reconnecting three pointers.
 
-For example:
+### Idea
 
-`1 → 2 → 3 → 4 → 5 → null`
-
-For `k = 2`, the last 2 nodes should move to the front:
-
-`4 → 5 → 1 → 2 → 3 → null`
-
-First, we find the size of the linked list.
-
-Then we calculate:
-
-`k = k % size`
-
-This is important because rotating a list of size `5` by `5` positions gives the same list.
-
-After finding the effective value of `k`, we find the node that will become the last node of the rotated list.
-
-Its next node becomes the new head.
-
----
-
-## Idea
-
-1. If the list is empty or contains only one node, return `head`.
-2. If `k == 0`, return `head`.
-3. Find the size of the linked list.
-4. Calculate `k = k % size`.
-5. If `k == 0`, return `head`.
-6. Find the node at position `size - k`.
-7. The next node will become the new head.
-8. Break the connection between the old part and the new head.
-9. Find the old tail.
-10. Connect the old tail to the original head.
-11. Return the new head.
+- **Edge case:** if the list is empty or has only one node, rotating it changes nothing — return `head` as-is.
+- **First pass — measure the length:** walk `temp` through the whole list, counting nodes into `size`.
+- **Reduce `k`:** `val = k % size` collapses away any full rotations (rotating a list of length `size` by `size` places returns it to its original form), leaving only the "effective" rotation amount, `0 <= val < size`.
+- **Advance `fast` by `val` steps:** a `for` loop from `1` to `val` moves `fast` forward `val` nodes from `head`.
+- **Handle the no-op case:** if `fast == head` (which happens exactly when `val == 0`, i.e. `k` was a multiple of the length), no rotation is actually needed — return `head` directly. (The `fast == null` check alongside it is a defensive guard; given `val < size`, `fast` can't actually run off the end here.)
+- **Second pass — find the new break point:** with `slow` starting back at `head`, advance `slow` and `fast` together, one step each, `while(fast.next != null)`. Since `fast` already has a `val`-node head start, by the time `fast` reaches the **last** node of the list, `slow` has landed exactly `val` nodes short of the end — precisely the node that needs to become the **new tail** of the front segment.
+- **Splice the list:**
+  - `extra = slow.next` — save the node that will become the **new head** (the start of what was the last `val` nodes).
+  - `slow.next = null` — cut the original list in two, ending the (soon-to-be) second half's front segment.
+  - `fast.next = head` — connect the old tail (`fast`, still the last node of the original list) back to the original `head`, forming the new tail-to-front link.
+- Return `extra` — the new head of the rotated list.
 
 ---
 
 ## Code
 
-    class Solution {
-        public ListNode rotateRight(ListNode head, int k) {
+```java
+class Solution {
+    public ListNode rotateRight(ListNode head, int k) {
 
-            if (head == null || head.next == null) {
-                return head;
-            }
-
-            if (k == 0) {
-                return head;
-            }
-
-            ListNode temp = head;
-            int size = 0;
-
-            // Find size of linked list
-            while (temp != null) {
-                size++;
-                temp = temp.next;
-            }
-
-            k = k % size;
-
-            if (k == 0) {
-                return head;
-            }
-
-            // Find the node just before the new head
-            int val = size - k;
-
-            ListNode current = head;
-
-            for (int i = 1; i < val; i++) {
-                current = current.next;
-            }
-
-            // New head
-            ListNode pointer = current.next;
-
-            // Break the list
-            current.next = null;
-
-            // Find the old tail
-            ListNode dummy = pointer;
-
-            while (dummy.next != null) {
-                dummy = dummy.next;
-            }
-
-            // Connect old tail to old head
-            dummy.next = head;
-
-            return pointer;
+        if(head == null || head.next == null){
+            return head;
         }
+
+        ListNode temp = head;
+        int size = 0;
+
+        while(temp != null){
+            temp = temp.next;
+            size++;
+        }
+
+        ListNode fast = head;
+        int val = k % size;
+
+        for(int i = 1 ; i <= val ; i++){
+            fast = fast.next;
+        }
+
+        if(fast == null || fast == head){
+            return head;
+        }
+
+        ListNode slow = head;
+        while(fast.next != null){
+            slow = slow.next;
+            fast = fast.next;
+        }
+
+        ListNode extra = slow.next;
+        slow.next = null;
+        fast.next = head;
+
+        return extra;
     }
+}
+```
 
 ---
 
-## Detailed Dry Run
+## Dry Run
 
 ### Input
 
-`head = [1,2,3,4,5]`
+```text
+head = [1,2,3,4,5]   (n0(1) -> n1(2) -> n2(3) -> n3(4) -> n4(5) -> null)
+k = 2
+```
 
-`k = 2`
+`head != null` and `head.next != null` → proceed.
 
-Initial list:
+### Phase 1 — Measure the length
 
-`1 → 2 → 3 → 4 → 5 → null`
+`temp = n0`, `size = 0`
 
-### Step 1: Find Size
+| Step | temp before | temp after | size |
+|------|-------------|------------|------|
+|1|n0|n1|1|
+|2|n1|n2|2|
+|3|n2|n3|3|
+|4|n3|n4|4|
+|5|n4|null|5|
 
-We traverse the complete list.
+Loop exits when `temp == null`. `size = 5`
 
-`temp = 1 → size = 1`
+### Phase 2 — Reduce k and advance fast
 
-`temp = 2 → size = 2`
+`fast = n0`, `val = k % size = 2 % 5 = 2`
 
-`temp = 3 → size = 3`
+| i | Condition (i <= 2) | Action | fast |
+|---|----------------------|--------|------|
+|1|true|`fast = fast.next`|n1|
+|2|true|`fast = fast.next`|n2|
+|3|false|loop exits|—|
 
-`temp = 4 → size = 4`
+`fast == null`? no. `fast == head`? `n2 != n0` → no. Continue.
 
-`temp = 5 → size = 5`
+### Phase 3 — Find the new break point
 
-`temp = null → stop`
+`slow = n0` (reset)
 
-Therefore:
+**Iteration 1:** `fast.next(n2.next = n3) != null` → runs
 
-`size = 5`
+| Step | Action | Result |
+|------|--------|--------|
+|slow = slow.next|n0.next = n1|slow = n1|
+|fast = fast.next|n2.next = n3|fast = n3|
 
----
+**Iteration 2:** `fast.next(n3.next = n4) != null` → runs
 
-### Step 2: Calculate Effective Rotation
+| Step | Action | Result |
+|------|--------|--------|
+|slow = slow.next|n1.next = n2|slow = n2|
+|fast = fast.next|n3.next = n4|fast = n4|
 
-`k = k % size`
+**Loop check:** `fast.next (n4.next)` is `null` → loop exits.
 
-`k = 2 % 5`
+State: `slow = n2`, `fast = n4` (the original last node)
 
-`k = 2`
+### Phase 4 — Splice
 
-So we need to rotate the list by 2 positions.
+- `extra = slow.next` → `extra = n2.next = n3`
+- `slow.next = null` → `n2.next = null` (front segment now ends at n2: `1 -> 2 -> 3` becomes `1 -> 2` ... wait, more precisely: `n0 -> n1 -> n2 -> null`)
+- `fast.next = head` → `n4.next = n0` (old tail connects back to old head)
 
----
+**Return:** `extra` (n3), traversing: `4 -> 5 -> 1 -> 2 -> 3 -> null`
 
-### Step 3: Find the New Tail
+Output:
 
-We calculate:
+```text
+[4,5,1,2,3]
+```
 
-`val = size - k`
-
-Therefore:
-
-`val = 5 - 2`
-
-`val = 3`
-
-We need to reach the 3rd node.
-
-`1 → 2 → 3 → 4 → 5`
-
-After the loop:
-
-`current = 3`
-
----
-
-### Step 4: Find the New Head
-
-We execute:
-
-`pointer = current.next`
-
-Since `current` is pointing to `3`:
-
-`pointer = 4`
-
-So `4` will become the new head.
-
----
-
-### Step 5: Break the Connection
-
-We execute:
-
-`current.next = null`
-
-Since `current = 3`, the list becomes:
-
-`1 → 2 → 3 → null`
-
-`4 → 5 → null`
-
----
-
-### Step 6: Find the Old Tail
-
-We start:
-
-`dummy = pointer`
-
-Therefore:
-
-`dummy = 4`
-
-Move `dummy` until the last node:
-
-`dummy = 4`
-
-`dummy = 5`
-
-Now:
-
-`dummy = 5`
-
-So `5` is the old tail.
-
----
-
-### Step 7: Connect Old Tail to Old Head
-
-We execute:
-
-`dummy.next = head`
-
-Therefore:
-
-`5 → 1`
-
-The complete list becomes:
-
-`4 → 5 → 1 → 2 → 3 → null`
-
----
-
-### Final Output
-
-`[4,5,1,2,3]`
+This matches the expected output.
 
 ---
 
 ## Why This Approach Works
 
-When we rotate a list to the right by `k` positions, the last `k` nodes move to the front.
+Rotating a list right by `k` places is equivalent to: keep the last `k` nodes in place at the front, and move everything else behind them — which just means finding the node that's `k` nodes from the end (the new tail of the front part) and the node right after it (the new head), then relinking the ends. Reducing `k` modulo the list's length first is essential because rotating by exactly `size` places (or any multiple of it) returns the list to its original order, so only the remainder actually matters — without this reduction, the `for` loop advancing `fast` could run for an enormous, unnecessary number of steps given the constraint `k` can be up to `2 * 10^9`.
 
-For:
+Giving `fast` a `val`-node head start before the synchronized walk is what makes `slow` land in exactly the right spot: since both pointers then move at the same rate, the gap between them stays fixed at `val` nodes, so when `fast` reaches the true last node, `slow` is necessarily sitting `val` nodes before it — exactly the break point needed.
 
-`1 → 2 → 3 → 4 → 5`
-
-and:
-
-`k = 2`
-
-the last two nodes are:
-
-`4 → 5`
-
-The remaining nodes are:
-
-`1 → 2 → 3`
-
-After reconnecting them:
-
-`4 → 5 → 1 → 2 → 3`
-
-The node at position `size - k` becomes the new tail.
-
-Its next node becomes the new head.
+The three-pointer splice (`extra`, cutting `slow.next`, and reconnecting `fast.next`) is what turns a single list into the rotated version without allocating any new nodes: it's really just relinking three existing connections — cutting one, and forming two others (the old tail to the old head, and returning the new head).
 
 ---
 
 ## Complexity Analysis
 
-### Time Complexity
-
-`O(n)`
-
-We traverse the linked list a few times, but each traversal takes `O(n)` time.
-
-Therefore, the overall time complexity is:
-
-`O(n)`
-
-### Space Complexity
-
-`O(1)`
-
-We only use a few pointers and do not create any extra data structure.
+- **Time Complexity:** `O(n)` — one pass to measure the length, a bounded pass (`val < n`) to advance `fast`, and a third pass (at most `n` steps) to find the break point; all three are linear in the list length, so the total remains `O(n)`
+- **Space Complexity:** `O(1)` — only a fixed set of pointer variables and counters are used; the rotation is done by relinking existing nodes, not creating new ones
 
 ---
 
 ## Key Insight
 
-The two most important calculations are:
-
-`k = k % size`
-
-and:
-
-`val = size - k`
-
-For example:
-
-`size = 5`
-
-`k = 2`
-
-Therefore:
-
-`size - k = 3`
-
-So node `3` becomes the new tail and node `4` becomes the new head.
-
-Original:
-
-`1 → 2 → 3 → 4 → 5`
-
-After rotation:
-
-`4 → 5 → 1 → 2 → 3`
+Reducing `k` modulo the list's length is the detail that makes this approach robust against arbitrarily large `k` values — recognizing that rotating by the full length (or any multiple of it) is a no-op collapses the problem down to at most one lap around the list. From there, giving one pointer a head start equal to the effective rotation amount is the same "fixed gap" technique used to find the nth-from-end node, repurposed here to locate the exact splice point in a single synchronized pass.
 
 ---
 
 ## Concepts Used
 
-- Singly Linked List
-- Linked List Traversal
-- Pointers
-- In-place Linked List Manipulation
-- Modulo Operator
-- List Rotation
-- Breaking and Reconnecting Nodes
-- `O(n)` Time Complexity
-- `O(1)` Space Complexity
+- Linked List
+- Two Pointers (Fixed Gap)
+- Modulo Arithmetic to Normalize Rotation Count
+- In-Place List Splicing
+- Constant Space Algorithm
