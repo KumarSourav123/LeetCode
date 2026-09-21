@@ -13,53 +13,38 @@ class Solution {
         if(head == null || head.next == null){
             return head;
         }
-        if(k == 0){
-            return head;
-        }
-        if(head.next.next == null){
-            if(k == 2){
-                return head;
-            }
-            if(k == 1){
-                ListNode extra = head.next;
-                head.next = null;
-                extra.next = head;
-                head = extra;
-                return head;
-            }
-        }
 
         ListNode temp = head;
         int size = 0;
+
         while(temp != null){
-            size++;
             temp = temp.next;
+            size++;
+        }
+        
+        ListNode fast = head;
+        int val = k % size;
+
+        for(int i = 1 ; i <= val ; i++){
+            fast = fast.next;
+            
         }
 
-        if(k % size == 0){
+        if(fast == null || fast == head){
             return head;
         }
 
-        int rotate = k % size;
-        int val = size-rotate;
-        ListNode current = head;
-
-        for(int i = 1 ; i < val ; i++){
-            current = current.next;
+        ListNode slow = head;
+        while(fast.next != null){
+            slow = slow.next;
+            fast = fast.next;            
         }
 
-        ListNode dummy = current.next;
-        ListNode pointer = current.next;
-        current.next = null;
-        rotate--;
+        ListNode extra = slow.next;
+        slow.next = null;
+        fast.next = head;
 
-        while(rotate > 0){
-            dummy = dummy.next;
-            rotate--;
-        }
-        dummy.next = head;
-
-        return pointer;
+        return extra;
 
     }
 }
