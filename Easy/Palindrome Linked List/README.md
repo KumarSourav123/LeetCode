@@ -57,13 +57,12 @@ class Solution {
         }
 
         ListNode prev = null;
-        ListNode current = slow;
 
-        while (current != null) {
-            ListNode after = current.next;
-            current.next = prev;
-            prev = current;
-            current = after;
+        while(slow != null){
+            ListNode after = slow.next;
+            slow.next = prev;
+            prev = slow;
+            slow = after;
         }
 
         ListNode first = head;
@@ -104,12 +103,12 @@ Loop exits (`fast == null`). `slow = n3` (start of second half: `n3 -> n4`)
 
 **Step 2: Reverse the second half (starting at n3)**
 
-`prev = null`, `current = n3`
+`prev = null`
 
-| current (val) | after = current.next | current.next = prev | prev = current | current = after |
+| slow (val) | after = slow.next | slow.next = prev | prev = slow | slow = after |
 |-------------------|----------------------------|--------------------------|---------------------|-----------------------|
-|n3 (2)|n4|n3.next = null|prev = n3|current = n4|
-|n4 (1)|null|n4.next = n3|prev = n4|current = null|
+|n3 (2)|n4|n3.next = null|prev = n3|slow = n4|
+|n4 (1)|null|n4.next = n3|prev = n4|slow = null|
 
 Reversed second half: `n4(1) -> n3(2) -> null`. `prev = n4`
 
