@@ -37,16 +37,16 @@ Output: [0]
 
 ## Approach
 
-This solution builds a brand-new merged list one node at a time, using a **dummy head** to avoid special-casing the first node, and comparing the current front of each list to decide which value gets appended next — then appends whatever's left over once one list runs dry.
+This solution merges the two lists by **relinking the original nodes** rather than creating new ones: a dummy head anchors the result, and at each step the smaller of the two current fronts is directly re-pointed into the merged chain, with whatever's left over attached in one shot once one list runs dry.
 
 ### Idea
 
-- Set up `dummy = new ListNode(0)` and `current = dummy`. `dummy` never holds real data; it just gives `current.next` somewhere to point on the very first append, so no separate "is this the first node?" check is needed.
+- Set up `dummy = new ListNode(0)` and `current = dummy`. `dummy` never holds real data; it just gives `current.next` somewhere to point on the very first attachment, so no separate "is this the first node?" check is needed.
 - **Main loop**, while both `list1` and `list2` are non-null:
-  - Compare `list1.val` and `list2.val`. Whichever is smaller-or-equal wins: create a **new** node copying that value, append it (`current.next = node; current = node;`), and advance that list's pointer (`list1 = list1.next` or `list2 = list2.next`).
-  - Using `<=` for the `list1.val <= list2.val` check means that on ties, `list1`'s node is taken first — this is what keeps the merge stable/consistent, though either list winning a tie would still produce a valid non-decreasing sequence.
+  - Compare `list1.val` and `list2.val`. Whichever is smaller-or-equal wins: `current.next = list1` (or `list2`) directly reuses that existing node — no `new ListNode(...)` copy is made — then `current = current.next` advances the tail of the merged chain, and that list's own pointer advances (`list1 = list1.next` or `list2 = list2.next`).
+  - Using `<=` for `list1.val <= list2.val` means ties favor `list1`, which keeps the merge stable, though either choice would still produce a valid non-decreasing sequence.
 - The main loop stops as soon as **either** list is exhausted, since the `&&` condition needs both to be non-null.
-- **Drain whichever list still has nodes left:** two follow-up `while` loops, `while(list1 != null)` and `while(list2 != null)`, each doing the same "create a new node, append, advance" pattern. At most one of these two loops actually does any work, since the main loop only stopped because one list ran out.
+- **Attach whatever's left over:** rather than two follow-up loops, a single `if/else` checks which list still has nodes remaining (`list1 != null`) and attaches that entire remaining chain in one assignment — `current.next = list1` or `current.next = list2`. Since the remainder is already a valid sorted sub-list with correct internal links, nothing further needs to be walked or relinked node by node.
 - Return `dummy.next` — the dummy node itself is skipped, and the real merged list starts right after it.
 
 ---
@@ -62,30 +62,21 @@ class Solution {
         while(list1 != null && list2 != null){
 
             if(list1.val <= list2.val){
-                ListNode node = new ListNode(list1.val);
-                current.next = node;
-                current = node;
+                current.next = list1;
+                current = current.next;
                 list1 = list1.next;
             }else{
-                ListNode node = new ListNode(list2.val);
-                current.next = node;
-                current = node;
+                current.next = list2;
+                current = current.next;
                 list2 = list2.next;
             }
 
         }
 
-        while(list1 != null){
-            ListNode node = new ListNode(list1.val);
-            current.next = node;
-            current = node;
-            list1 = list1.next;
-        }
-        while(list2 != null){
-            ListNode node = new ListNode(list2.val);
-            current.next = node;
-            current = node;
-            list2 = list2.next;
+        if(list1 != null){
+            current.next = list1;
+        }else{
+            current.next = list2;
         }
 
         return dummy.next;
@@ -106,67 +97,57 @@ list2 = [1,3,4]   (b1 -> b3 -> b4 -> null)
 
 `dummy = d0`, `current = d0`
 
-### Phase 1 — Main comparison loop
+### Main comparison loop
 
 **Iteration 1:** `list1(a1) != null` and `list2(b1) != null` → runs. `list1.val(1) <= list2.val(1)` → true
 
 | Step | Action | Result |
 |------|--------|--------|
-|create node|`node = new ListNode(1)` from list1|call it `n1`|
-|append|`current.next = n1; current = n1`|d0 -> n1(1)|
-|advance|`list1 = a2`|—|
+|attach|`current.next = a1`|d0 -> a1|
+|advance current|`current = a1`|—|
+|advance list1|`list1 = a1.next = a2`|—|
 
 **Iteration 2:** `list1(a2) != null` and `list2(b1) != null` → runs. `list1.val(2) <= list2.val(1)` → false
 
 | Step | Action | Result |
 |------|--------|--------|
-|create node|`node = new ListNode(1)` from list2|call it `n2`|
-|append|`current.next = n2; current = n2`|d0 -> n1(1) -> n2(1)|
-|advance|`list2 = b3`|—|
+|attach|`current.next = b1`|... -> a1 -> b1|
+|advance current|`current = b1`|—|
+|advance list2|`list2 = b1.next = b3`|—|
 
 **Iteration 3:** `list1(a2) != null` and `list2(b3) != null` → runs. `list1.val(2) <= list2.val(3)` → true
 
 | Step | Action | Result |
 |------|--------|--------|
-|create node|`node = new ListNode(2)` from list1|call it `n3`|
-|append|`current.next = n3; current = n3`|... -> n3(2)|
-|advance|`list1 = a4`|—|
+|attach|`current.next = a2`|... -> b1 -> a2|
+|advance current|`current = a2`|—|
+|advance list1|`list1 = a2.next = a4`|—|
 
 **Iteration 4:** `list1(a4) != null` and `list2(b3) != null` → runs. `list1.val(4) <= list2.val(3)` → false
 
 | Step | Action | Result |
 |------|--------|--------|
-|create node|`node = new ListNode(3)` from list2|call it `n4`|
-|append|`current.next = n4; current = n4`|... -> n4(3)|
-|advance|`list2 = b4`|—|
+|attach|`current.next = b3`|... -> a2 -> b3|
+|advance current|`current = b3`|—|
+|advance list2|`list2 = b3.next = b4`|—|
 
 **Iteration 5:** `list1(a4) != null` and `list2(b4) != null` → runs. `list1.val(4) <= list2.val(4)` → true
 
 | Step | Action | Result |
 |------|--------|--------|
-|create node|`node = new ListNode(4)` from list1|call it `n5`|
-|append|`current.next = n5; current = n5`|... -> n5(4)|
-|advance|`list1 = null` (a4 was the last node)|—|
+|attach|`current.next = a4`|... -> b3 -> a4|
+|advance current|`current = a4`|—|
+|advance list1|`list1 = a4.next = null`|—|
 
 **Loop check:** `list1 == null` → main loop exits.
 
-State: merged so far `1 -> 1 -> 2 -> 3 -> 4`, remaining `list1 = null`, `list2 = [4]` (still pointing at `b4`)
+State: merged chain so far `1 -> 1 -> 2 -> 3 -> 4`, remaining `list1 = null`, `list2 = [4]` (still `b4`)
 
-### Phase 2 — Drain the remaining list
+### Attach the remainder
 
-`while(list1 != null)`: `list1` is already `null` → doesn't run.
+`if(list1 != null)` → `list1` is `null` → false → `else` branch: `current.next = list2` → `a4.next = b4`
 
-`while(list2 != null)`: `list2(b4) != null` → runs
-
-| Step | Action | Result |
-|------|--------|--------|
-|create node|`node = new ListNode(4)` from list2|call it `n6`|
-|append|`current.next = n6; current = n6`|... -> n6(4)|
-|advance|`list2 = null` (b4 was the last node)|—|
-
-`list2 == null` → loop exits.
-
-**Return:** `dummy.next` (n1), traversing: `1 -> 1 -> 2 -> 3 -> 4 -> 4 -> null`
+**Return:** `dummy.next` (a1), traversing: `1 -> 1 -> 2 -> 3 -> 4 -> 4 -> null`
 
 Output:
 
@@ -180,24 +161,24 @@ This matches the expected output.
 
 ## Why This Approach Works
 
-Since both input lists are already individually sorted in non-decreasing order, the smallest remaining value across the whole merge is always sitting at the front of one of the two lists — never buried further in. So a simple "compare the two current fronts, take the smaller, advance that list" loop is guaranteed to emit values in overall non-decreasing order, one at a time, until one list is exhausted.
+Since both input lists are already individually sorted in non-decreasing order, the smallest remaining value across the whole merge is always sitting at the front of one of the two lists. So a simple "compare the two current fronts, relink the smaller one into the result, advance that list" loop is guaranteed to build the merged chain in non-decreasing order.
 
-Once one list is empty, everything left in the other list is already sorted **and** every remaining value is `>=` everything already appended (since the exhausted list's last comparison already confirmed the other list's current front was `>=` it), so it can simply be copied over wholesale — which is exactly what the two drain loops do.
+Because the winning node (`list1` or `list2`) is relinked directly rather than copied, its `.next` pointer still points into the rest of its original list at that moment — which is exactly what makes the leftover-attachment step safe: once one list is exhausted, everything remaining in the other list is already correctly linked and already sorted (and every value in it is `>=` everything already merged in), so `current.next = list1` (or `list2`) can attach the *entire* remaining chain in a single assignment, with no need to walk and re-link it node by node.
 
-The dummy head is a standard trick for building a list from scratch: without it, the code would need an extra branch to handle attaching the very first node (since there's no "previous node" to link from before anything exists).
+The dummy head is the standard trick for building a list from scratch without special-casing the very first attachment.
 
 ---
 
 ## Complexity Analysis
 
-- **Time Complexity:** `O(m + n)` — where `m` and `n` are the lengths of `list1` and `list2`; the main loop and the two drain loops together visit every node of both lists exactly once
-- **Space Complexity:** `O(m + n)` for the newly created output nodes, since this solution builds an entirely new list rather than reusing/re-linking the original nodes; excluding the output, only `O(1)` extra pointer variables are used
+- **Time Complexity:** `O(m + n)` — where `m` and `n` are the lengths of `list1` and `list2`; the main loop visits each node at most once before one list is exhausted, and the final attachment is a single `O(1)` pointer assignment
+- **Space Complexity:** `O(1)` — this version reuses the existing nodes from both input lists rather than allocating new ones, so aside from the dummy node and a fixed set of pointer variables, no extra memory proportional to the input size is used
 
 ---
 
 ## Key Insight
 
-Merging two already-sorted sequences only ever needs to look at their current fronts — this is the core idea behind the merge step of merge sort, applied directly to linked lists instead of arrays. The dummy-head pattern is what keeps the "build a list from nothing" logic uniform, so the very first append doesn't need special-case handling.
+Relinking existing nodes instead of copying their values into new ones is what drops the space complexity from `O(m + n)` down to `O(1)` — since a node's own `.next` pointer already encodes "the rest of my original list," the moment one input list is exhausted, its counterpart's remaining tail can be attached wholesale in one step rather than being walked node by node, because it's already a valid, correctly-linked, sorted chain.
 
 ---
 
@@ -206,4 +187,6 @@ Merging two already-sorted sequences only ever needs to look at their current fr
 - Linked List
 - Two Pointers
 - Merge (as in Merge Sort)
+- In-Place Node Relinking
 - Dummy Head Node Technique
+- Constant Space Algorithm
