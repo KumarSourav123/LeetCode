@@ -15,30 +15,22 @@ class Solution {
         while(list1 != null && list2 != null){  
 
             if(list1.val <= list2.val){
-                ListNode node = new ListNode(list1.val);
-                current.next = node;
-                current = node;
+                current.next = list1;
+                current = current.next;
                 list1 = list1.next;
             }else{
-                ListNode node = new ListNode(list2.val);
-                current.next = node;
-                current = node;
+                current.next = list2;
+                current = current.next;
                 list2 = list2.next;
             }
 
         }
 
-        while(list1 != null){
-            ListNode node = new ListNode(list1.val);
-            current.next = node;
-            current = node;
-            list1 = list1.next;
+        if(list1 != null){
+            current.next = list1;
         }
-        while(list2 != null){
-            ListNode node = new ListNode(list2.val);
-            current.next = node;
-            current = node;
-            list2 = list2.next;
+        else{
+            current.next = list2;
         }
 
         return dummy.next;
