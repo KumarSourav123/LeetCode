@@ -1,4 +1,3 @@
-
 class ListNode {
     int val;
     ListNode next;
@@ -8,7 +7,7 @@ class ListNode {
     }
 }
 
-public class Solution {
+class Solution {
     public ListNode detectCycle(ListNode head) {
 
         if(head == null || head.next == null){
