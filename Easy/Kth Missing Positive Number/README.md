@@ -4,196 +4,48 @@
 
 Given an array `arr` of positive integers sorted in a **strictly increasing order**, and an integer `k`.
 
-Return the **kth positive integer that is missing** from the array.
+Return *the* `kth` *positive integer that is missing from this array*.
 
 ---
 
 ## Example 1:
-
-```text
+```
 Input: arr = [2,3,4,7,11], k = 5
-
 Output: 9
+Explanation: The missing positive integers are [1,5,6,8,9,10,12,13,...]. The 5th missing positive integer is 9.
 ```
-
-### Explanation:
-
-The missing positive integers are:
-
-```text
-[1,5,6,8,9,10,12,13,...]
-```
-
-The `5th` missing positive integer is `9`.
-
----
 
 ## Example 2:
-
-```text
+```
 Input: arr = [1,2,3,4], k = 2
-
 Output: 6
+Explanation: The missing positive integers are [5,6,7,...]. The 2nd missing positive integer is 6.
 ```
-
-### Explanation:
-
-The missing positive integers are:
-
-```text
-[5,6,7,...]
-```
-
-The `2nd` missing positive integer is `6`.
-
----
 
 ## Constraints:
+- `1 <= arr.length <= 1000`
+- `1 <= arr[i] <= 1000`
+- `1 <= k <= 1000`
+- `arr[i] < arr[j]` for `1 <= i < j <= arr.length`
 
-* `1 <= arr.length <= 1000`
-* `1 <= arr[i] <= 1000`
-* `1 <= k <= 1000`
-* `arr[i] < arr[j]` for `1 <= i < j <= arr.length`
-* The array is sorted in **strictly increasing order**.
-
----
-
-## Follow Up
-
-Can you solve this problem in less than `O(n)` complexity?
+**Follow up:** Could you solve this problem in less than `O(n)` complexity?
 
 ---
 
 ## Approach
 
-This solution uses **binary search** to find the position where the `kth` missing positive number should be located.
-
-Instead of checking every positive number one by one, we calculate how many positive integers are missing **before each index**.
+This solution uses **binary search on the count of missing numbers before each array position**, exploiting a key fact: since `arr` is strictly increasing, the number of positive integers missing *before* index `i` can be computed directly from `arr[i]` and `i` alone, without ever explicitly listing out the missing numbers.
 
 ### Idea
 
-For an element at index `mid`:
-
-```text
-arr[mid]
-```
-
-there should normally be:
-
-```text
-mid + 1
-```
-
-positive numbers from `1` up to the position represented by this index.
-
-For example:
-
-```text
-arr = [2,3,4,7,11]
-
-Index:    0  1  2  3   4
-Array:    2  3  4  7  11
-Expected: 1  2  3  4   5
-```
-
-At index `3`:
-
-```text
-arr[3] = 7
-```
-
-If there were no missing numbers, the value should have been:
-
-```text
-mid + 1 = 4
-```
-
-Therefore, the number of missing positive integers before `7` is:
-
-```text
-7 - 4 = 3
-```
-
-This gives the formula used in the code:
-
-```text
-missingNumber = arr[mid] - (mid + 1)
-```
-
-### Binary Search Decision
-
-For every `mid`, calculate:
-
-```text
-missingNumber = arr[mid] - (mid + 1)
-```
-
-Then:
-
-* If `missingNumber < k`, there are **not enough missing numbers** before `mid`, so we need to search on the **right side**.
-
-  ```text
-  start = mid + 1
-  ```
-
-* If `missingNumber >= k`, we have found a position where at least `k` numbers are missing. However, there may be an earlier position that also satisfies this condition, so search on the **left side**.
-
-  ```text
-  end = mid - 1
-  ```
-
-The binary search therefore finds the **first index where the number of missing positive integers is at least `k`**.
-
-Finally, the answer is:
-
-```text
-start + k
-```
-
----
-
-## Why `start + k` Gives the Answer
-
-After the binary search, `start` represents the number of elements in the array that are positioned before the answer.
-
-If there are:
-
-```text
-start
-```
-
-elements from the array before the answer, and we need the:
-
-```text
-kth
-```
-
-missing number, then the answer is:
-
-```text
-start + k
-```
-
-For example:
-
-```text
-arr = [2,3,4,7,11]
-k = 5
-```
-
-After binary search:
-
-```text
-start = 4
-```
-
-Therefore:
-
-```text
-answer = start + k
-        = 4 + 5
-        = 9
-```
+- **The key formula:** at any index `i` (0-indexed), if no numbers were missing, `arr[i]` would equal `i + 1` (the `(i+1)`th positive integer). The actual number of positive integers missing *up through* this point is therefore `arr[i] - (i + 1)`. Because `arr` is strictly increasing, this "missing count so far" is a **non-decreasing** function of `i` — it only ever grows or stays flat as `i` increases — which is exactly the monotonic structure binary search needs.
+- Initialize `start = 0`, `end = arr.length - 1`, and `missingNumber = 0`.
+- **Binary search loop**, `while(start <= end)`:
+  - `mid = start + (end - start) / 2` — a standard overflow-safe midpoint calculation.
+  - `missingNumber = arr[mid] - (mid + 1)` — the count of missing positive integers up through index `mid`.
+  - **If `missingNumber < k`**, not enough numbers are missing yet by this point — the `k`th missing number must lie further to the right, so search the right half: `start = mid + 1`.
+  - **Otherwise** (`missingNumber >= k`), *at least* `k` numbers are already missing by this point, meaning the `k`th missing number occurs at or before this position — search the left half: `end = mid - 1`.
+- Once the loop ends, `start` has converged to the position **just past** the last index where fewer than `k` numbers were missing — in other words, `start` numbers from `1` to `start` have already been accounted for as "present or already counted as missing" in a way that means exactly `start` extra numbers need to be added on top of `k` to reach the true answer. Return `start + k`.
 
 ---
 
@@ -202,15 +54,12 @@ answer = start + k
 ```java
 class Solution {
     public int findKthPositive(int[] arr, int k) {
-
         int start = 0;
         int end = arr.length-1;
         int missingNumber = 0;
 
         while(start <= end){
-
             int mid = start + (end-start)/2;
-
             missingNumber = arr[mid] - (mid+1);
 
             if(missingNumber < k){
@@ -232,308 +81,79 @@ class Solution {
 ### Input
 
 ```text
-arr = [2,3,4,7,11]
+arr = [2, 3, 4, 7, 11]
+index: 0  1  2  3   4
 k = 5
 ```
 
-Initial values:
+`start = 0`, `end = 4`
+
+**Iteration 1:** `start(0) <= end(4)` → runs
+
+| Step | Calculation | Result |
+|------|-------------|--------|
+|mid|`0 + (4-0)/2`|2|
+|missingNumber|`arr[2] - (2+1) = 4 - 3`|1|
+|Check|`missingNumber(1) < k(5)`|true|
+|Action|`start = mid+1`|`start = 3`|
+
+**Iteration 2:** `start(3) <= end(4)` → runs
+
+| Step | Calculation | Result |
+|------|-------------|--------|
+|mid|`3 + (4-3)/2 = 3 + 0`|3|
+|missingNumber|`arr[3] - (3+1) = 7 - 4`|3|
+|Check|`missingNumber(3) < k(5)`|true|
+|Action|`start = mid+1`|`start = 4`|
+
+**Iteration 3:** `start(4) <= end(4)` → runs
+
+| Step | Calculation | Result |
+|------|-------------|--------|
+|mid|`4 + (4-4)/2`|4|
+|missingNumber|`arr[4] - (4+1) = 11 - 5`|6|
+|Check|`missingNumber(6) < k(5)`|false|
+|Action|`else`: `end = mid-1`|`end = 3`|
+
+**Loop check:** `start(4) <= end(3)`? false → loop exits.
+
+**Return:** `start + k = 4 + 5 = 9`
+
+Output:
 
 ```text
-start = 0
-end = 4
+9
 ```
 
-### Binary Search
-
-| start | end | mid | `arr[mid]` | `arr[mid] - (mid+1)` | Missing `< k`? | Action      |
-| ----- | --- | --- | ---------- | -------------------- | -------------- | ----------- |
-| 0     | 4   | 2   | 4          | `4 - 3 = 1`          | `1 < 5` → Yes  | `start = 3` |
-| 3     | 4   | 3   | 7          | `7 - 4 = 3`          | `3 < 5` → Yes  | `start = 4` |
-| 4     | 4   | 4   | 11         | `11 - 5 = 6`         | `6 < 5` → No   | `end = 3`   |
-
-Now:
-
-```text
-start = 4
-end = 3
-```
-
-Since:
-
-```text
-start > end
-```
-
-the binary search stops.
-
-Finally:
-
-```text
-answer = start + k
-       = 4 + 5
-       = 9
-```
-
-Therefore:
-
-```text
-Output = 9
-```
-
----
-
-## Detailed Dry Run
-
-Let's understand the missing-number calculation at each index.
-
-```text
-arr = [2,3,4,7,11]
-```
-
-### Index 0
-
-```text
-arr[0] = 2
-```
-
-Expected value:
-
-```text
-0 + 1 = 1
-```
-
-Missing numbers:
-
-```text
-2 - 1 = 1
-```
-
-So, `1` positive number is missing before `2`:
-
-```text
-[1]
-```
-
-Since:
-
-```text
-1 < 5
-```
-
-we need to search right.
-
----
-
-### Index 2
-
-```text
-arr[2] = 4
-```
-
-Expected value:
-
-```text
-2 + 1 = 3
-```
-
-Missing numbers:
-
-```text
-4 - 3 = 1
-```
-
-So only `1` number is missing before `4`:
-
-```text
-[1]
-```
-
-Again:
-
-```text
-1 < 5
-```
-
-Search right.
-
----
-
-### Index 3
-
-```text
-arr[3] = 7
-```
-
-Expected value:
-
-```text
-3 + 1 = 4
-```
-
-Missing numbers:
-
-```text
-7 - 4 = 3
-```
-
-The missing numbers before `7` are:
-
-```text
-[1,5,6]
-```
-
-There are `3` missing numbers.
-
-Since:
-
-```text
-3 < 5
-```
-
-we still need more missing numbers, so search right.
-
----
-
-### Index 4
-
-```text
-arr[4] = 11
-```
-
-Expected value:
-
-```text
-4 + 1 = 5
-```
-
-Missing numbers:
-
-```text
-11 - 5 = 6
-```
-
-The missing numbers before `11` are:
-
-```text
-[1,5,6,8,9,10]
-```
-
-There are `6` missing numbers.
-
-Since:
-
-```text
-6 >= 5
-```
-
-the `5th` missing number must be at or before this position.
-
-Therefore, search left.
+This matches the expected output. Sanity check against the problem's own explanation: the missing positive integers are `[1,5,6,8,9,10,12,13,...]`, and the 5th one in that list is indeed `9`.
 
 ---
 
 ## Why This Approach Works
 
-The number of missing positive integers before each element is **monotonically increasing**.
+The quantity `arr[i] - (i+1)` precisely counts how many positive integers are missing from `1` up through `arr[i]`, because in a "no gaps" scenario `arr[i]` would exactly equal `i+1`; any excess above that (`arr[i] - (i+1)`) must be attributable to that many positive integers having been skipped somewhere before this point. Since `arr` is strictly increasing (each step forward increases `arr[i]` by at least `1`, i.e. by at least as much as `i` itself increases), this missing-count can never decrease as `i` grows — it's monotonically non-decreasing, which is exactly the property binary search relies on to correctly narrow down a "first position where some threshold is crossed."
 
-For:
-
-```text
-arr = [2,3,4,7,11]
-```
-
-we get:
-
-```text
-Index        0   1   2   3   4
-arr          2   3   4   7  11
-Missing      1   1   1   3   6
-```
-
-The missing count never decreases.
-
-This creates a monotonic pattern:
-
-```text
-Missing count:
-
-1   1   1   3   6
-            ↑
-          k = 5
-```
-
-We need to find the **first position where the missing count becomes greater than or equal to `k`**.
-
-That is exactly the type of problem where binary search can be used.
-
-Once that position is found, the answer can be calculated directly using:
-
-```text
-start + k
-```
-
-Thus, instead of checking all positive integers, the algorithm finds the answer in **logarithmic time**.
+The binary search converges on the boundary between "fewer than `k` numbers missing so far" and "at least `k` numbers missing so far." Once `start` settles past that boundary, everything from `1` to `arr[start-1]`'s vicinity has been accounted for, and the missing numbers from that point onward are simply consecutive integers (since no more `arr` elements constrain them within the search's relevant region) — so the `k`th missing number is exactly `start` positions past `k` itself: `start + k`. This elegantly sidesteps needing to explicitly enumerate or count through any missing numbers one at a time.
 
 ---
 
 ## Complexity Analysis
 
-* **Time Complexity:** `O(log n)`
-
-  Binary search reduces the search space by half in every iteration.
-
-* **Space Complexity:** `O(1)`
-
-  Only a few integer variables are used, so no additional data structure is required.
+- **Time Complexity:** `O(log n)` — binary search over the array's index range, satisfying the follow-up's requirement of beating `O(n)`
+- **Space Complexity:** `O(1)` — only a fixed set of integer variables is used, no auxiliary arrays or data structures
 
 ---
 
 ## Key Insight
 
-The most important observation is the formula:
-
-```text
-missingNumber = arr[mid] - (mid + 1)
-```
-
-It tells us exactly how many positive integers are missing before `arr[mid]`.
-
-Then binary search finds the first index where:
-
-```text
-missingNumber >= k
-```
-
-After finding that position:
-
-```text
-answer = start + k
-```
-
-So the complete idea is:
-
-```text
-Calculate missing numbers
-          ↓
-Use binary search
-          ↓
-Find first index where missing >= k
-          ↓
-Answer = start + k
-```
-
-This converts the original `O(n)` search into an efficient **`O(log n)` binary search solution**.
+Whenever a problem's "count of some property up to position `i`" can be computed in `O(1)` directly from properties of the sorted input (here, `arr[i] - (i+1)` for the missing-count), and that count is monotonic in `i`, binary search becomes applicable even though the original question ("what's the `k`th missing number?") doesn't look like a classic "find a target value" search at first glance. Recognizing and deriving this kind of monotonic auxiliary quantity is often the key step in turning an `O(n)` scanning solution into an `O(log n)` binary search.
 
 ---
 
 ## Concepts Used
 
-* Array
-* Binary Search
-* Binary Search on Monotonic Condition
-* Missing Number Calculation
-* Index-Based Mathematical Formula
-* Monotonic Function
-* Lower Bound Concept
-* `O(log n)` Optimization
-* Constant Space
+- Array
+- Binary Search
+- Monotonic Function Property
+- Mathematical Derivation (index-vs-value gap counting)
+- Constant Space Algorithm
