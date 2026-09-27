@@ -2,413 +2,60 @@
 
 ## Problem Statement
 
-Given two sorted arrays `nums1` and `nums2` of size `m` and `n` respectively, return the **median of the two sorted arrays**.
+Given two sorted arrays `nums1` and `nums2` of size `m` and `n` respectively, return **the median** of the two sorted arrays.
 
-The overall run time complexity should be:
-
-```text
-O(log(min(m,n)))
-```
+The overall run time complexity should be `O(log (m+n))`.
 
 ---
 
 ## Example 1:
-
-```text
+```
 Input: nums1 = [1,3], nums2 = [2]
-
 Output: 2.00000
+Explanation: merged array = [1,2,3] and median is 2.
 ```
-
-### Explanation:
-
-The merged sorted array is:
-
-```text
-[1,2,3]
-```
-
-Since there are `3` elements, the middle element is `2`.
-
-Therefore, the median is:
-
-```text
-2
-```
-
----
 
 ## Example 2:
-
-```text
+```
 Input: nums1 = [1,2], nums2 = [3,4]
-
 Output: 2.50000
+Explanation: merged array = [1,2,3,4] and median is (2 + 3) / 2 = 2.5.
 ```
-
-### Explanation:
-
-The merged sorted array is:
-
-```text
-[1,2,3,4]
-```
-
-Since there are `4` elements, the median is the average of the two middle elements:
-
-```text
-(2 + 3) / 2 = 2.5
-```
-
-Therefore, the median is:
-
-```text
-2.5
-```
-
----
 
 ## Constraints:
-
-* `nums1.length == m`
-* `nums2.length == n`
-* `0 <= m <= 1000`
-* `0 <= n <= 1000`
-* `1 <= m + n <= 2000`
-* `-10^6 <= nums1[i], nums2[i] <= 10^6`
-* Both `nums1` and `nums2` are sorted in **non-decreasing order**.
+- `nums1.length == m`
+- `nums2.length == n`
+- `0 <= m <= 1000`
+- `0 <= n <= 1000`
+- `1 <= m + n <= 2000`
+- `-10^6 <= nums1[i], nums2[i] <= 10^6`
 
 ---
 
 ## Approach
 
-This solution uses **Binary Search on the partition**.
-
-The main idea is to divide the two sorted arrays into a **left half** and a **right half** such that:
-
-* Every element on the left side is less than or equal to every element on the right side.
-* The left side contains exactly half of the total elements.
-* Once the correct partition is found, the median can be calculated directly from the boundary elements.
-
-### Important Optimization
-
-The binary search is always performed on the **smaller array**.
-
-```java
-if(n1 > n2){
-    return findMedianSortedArrays(nums2, nums1);
-}
-```
-
-This ensures that:
-
-```text
-O(log(min(n1,n2)))
-```
-
-is achieved.
-
----
-
-## Partition Idea
-
-Suppose we have:
-
-```text
-nums1 = [1,3]
-nums2 = [2,4,5]
-```
-
-We want to divide the combined elements into two halves.
-
-For example:
-
-```text
-Left side  | Right side
------------|-----------
-1, 2, 3    | 4, 5
-```
-
-The partition must satisfy:
-
-```text
-left elements <= right elements
-```
-
-The binary search determines how many elements should be taken from `nums1`.
-
-Let:
-
-```text
-mid1 = number of elements taken from nums1
-```
-
-Then the number of elements that must be taken from `nums2` is:
-
-```text
-mid2 = left - mid1
-```
-
-where:
-
-```text
-left = (n1 + n2 + 1) / 2
-```
-
-The `+1` makes the calculation convenient for both odd and even total lengths.
-
----
-
-## Understanding `mid1` and `mid2`
-
-Suppose:
-
-```text
-nums1 = [1,3]
-nums2 = [2,4,5]
-```
-
-Total number of elements:
-
-```text
-n = 2 + 3 = 5
-```
-
-Therefore:
-
-```text
-left = (5 + 1) / 2
-     = 3
-```
-
-If we choose:
-
-```text
-mid1 = 1
-```
-
-then:
-
-```text
-mid2 = 3 - 1
-     = 2
-```
-
-So the partition becomes:
-
-```text
-nums1: [1 | 3]
-
-nums2: [2,4 | 5]
-```
-
-The left side contains:
-
-```text
-[1,2,4]
-```
-
-and the right side contains:
-
-```text
-[3,5]
-```
-
-This partition is invalid because:
-
-```text
-4 > 3
-```
-
-So we need to move the partition in `nums1`.
-
----
-
-## Four Important Boundary Values
-
-For every partition, we only need four values:
-
-```text
-l1 = largest element on the left side of nums1
-r1 = smallest element on the right side of nums1
-
-l2 = largest element on the left side of nums2
-r2 = smallest element on the right side of nums2
-```
-
-The correct partition must satisfy:
-
-```text
-l1 <= r2
-```
-
-and:
-
-```text
-l2 <= r1
-```
-
-Therefore, the valid partition condition is:
-
-```text
-if(l1 <= r2 && l2 <= r1)
-```
-
----
-
-## Handling Boundary Cases
-
-Sometimes the partition can be at the beginning or end of an array.
-
-For example, if:
-
-```text
-mid1 = 0
-```
-
-there is no element on the left side of `nums1`.
-
-The code handles this by using:
-
-```java
-int l1 = Integer.MIN_VALUE;
-```
-
-Similarly, if the partition is at the end of an array, there is no element on the right side.
-
-So the code uses:
-
-```java
-int r1 = Integer.MAX_VALUE;
-```
-
-The same logic is applied to `l2` and `r2`.
-
-This allows the same comparison logic to work even at the boundaries.
-
----
-
-## Binary Search Decision
-
-After calculating the four boundary values:
-
-```text
-l1, r1, l2, r2
-```
-
-we check whether the partition is correct.
-
-### Case 1: Correct Partition
-
-If:
-
-```text
-l1 <= r2 && l2 <= r1
-```
-
-then the partition is correct.
-
-Now we can calculate the median.
-
----
-
-### Case 2: `l1 > r2`
-
-If:
-
-```text
-l1 > r2
-```
-
-then we have taken **too many elements from `nums1`** on the left side.
-
-Therefore, move the partition of `nums1` to the left:
-
-```java
-high = mid1 - 1;
-```
-
----
-
-### Case 3: `l2 > r1`
-
-If:
-
-```text
-l2 > r1
-```
-
-then we have taken **too few elements from `nums1`**.
-
-Therefore, move the partition to the right:
-
-```java
-low = mid1 + 1;
-```
-
----
-
-## Finding the Median
-
-Once the correct partition is found, the median depends on whether the total number of elements is odd or even.
-
-### Odd Number of Elements
-
-If:
-
-```text
-n % 2 == 1
-```
-
-the median is the largest element on the left side:
-
-```text
-max(l1,l2)
-```
-
-So the code returns:
-
-```java
-Math.max(l1,l2)
-```
-
----
-
-### Even Number of Elements
-
-If:
-
-```text
-n % 2 == 0
-```
-
-there are two middle elements.
-
-They are:
-
-```text
-max(l1,l2)
-```
-
-and:
-
-```text
-min(r1,r2)
-```
-
-Therefore:
-
-```text
-median = (max(l1,l2) + min(r1,r2)) / 2
-```
-
-The code uses:
-
-```java
-((double)Math.max(l1,l2) + Math.min(r1,r2)) / 2.0
-```
-
-to make sure the result is calculated as a `double`.
+This solution uses **binary search on the smaller array's partition point**, avoiding ever actually merging the two arrays. The core idea: find a way to split both arrays into a combined "left half" and "right half" (of the correct total sizes) such that every element in the left half is `<=` every element in the right half — at which point the median can be read directly off the boundary elements, without ever sorting or merging anything.
+
+### Idea
+
+- **Ensure `nums1` is the shorter array:** if `n1 > n2`, recurse with the arguments swapped, `findMedianSortedArrays(nums2, nums1)`. Binary searching over the shorter array keeps the search space (and thus the time complexity) tied to `O(log(min(m,n)))`, well within the required `O(log(m+n))` bound.
+- **Set up the binary search bounds:** `low = 0`, `high = n1` — searching over how many elements of `nums1` (`mid1`, from `0` to `n1`) go into the "left half."
+- **Compute the fixed target left-half size:** `left = (n1 + n2 + 1) / 2` — this is how many total elements (from both arrays combined) should end up in the left half. The `+1` before dividing ensures that for an odd total length, the left half gets the extra element (which is what makes the odd-length case resolve to a single middle value).
+- **Binary search loop**, `while(low <= high)`:
+  - `mid1 = (low + high) / 2` — try taking this many elements from `nums1` into the left half.
+  - `mid2 = left - mid1` — the remaining left-half elements must come from `nums2`, so this is forced once `mid1` and the target `left` size are fixed.
+  - **Identify the four boundary values** around this partition:
+    - `r1 = nums1[mid1]` (the first element of `nums1`'s right half), or `Integer.MAX_VALUE` if `mid1 == n1` (nothing left in `nums1`'s right half).
+    - `r2 = nums2[mid2]` similarly, or `MAX_VALUE` if `mid2 == n2`.
+    - `l1 = nums1[mid1-1]` (the last element of `nums1`'s left half), or `Integer.MIN_VALUE` if `mid1 == 0` (nothing in `nums1`'s left half).
+    - `l2 = nums2[mid2-1]` similarly, or `MIN_VALUE` if `mid2 == 0`.
+  - **Check if this partition is valid:** `if(l1 <= r2 && l2 <= r1)` — every left-half element must be `<=` every right-half element. Using the sentinel `MIN_VALUE`/`MAX_VALUE` values means a "missing" boundary (because one array contributed nothing to that half) is automatically treated as never violating the condition.
+    - If valid, the median can be computed immediately:
+      - **Odd total length** (`n % 2 == 1`): the median is the single largest value in the left half, `Math.max(l1, l2)`.
+      - **Even total length**: the median is the average of the largest left-half value and the smallest right-half value: `(Math.max(l1,l2) + Math.min(r1,r2)) / 2.0`.
+    - **If `l1 > r2`**, `nums1`'s left half reaches too far into large values — too many elements were taken from `nums1`, so search a smaller `mid1`: `high = mid1 - 1`.
+    - **Otherwise** (`l2 > r1`, implicitly, since the valid case and the `l1 > r2` case were already ruled out), not enough was taken from `nums1` — search a larger `mid1`: `low = mid1 + 1`.
+- A final `return 0;` is an unreachable fallback, since the binary search is guaranteed to find a valid partition and return from within the loop before it can exit naturally.
 
 ---
 
@@ -417,7 +64,6 @@ to make sure the result is calculated as a `double`.
 ```java
 class Solution {
     public double findMedianSortedArrays(int[] nums1, int[] nums2) {
-
         int n1 = nums1.length;
         int n2 = nums2.length;
 
@@ -432,37 +78,25 @@ class Solution {
         int n = n1+n2;
 
         while(low <= high){
-
             int mid1 = (low+high)/2;
-            int mid2 = left-mid1;
+            int mid2 = left - mid1;
 
             int l1 = Integer.MIN_VALUE;
             int l2 = Integer.MIN_VALUE;
-
             int r1 = Integer.MAX_VALUE;
             int r2 = Integer.MAX_VALUE;
 
-            if(mid1 < n1)
-                r1 = nums1[mid1];
-
-            if(mid2 < n2)
-                r2 = nums2[mid2];
-
-            if(mid1 - 1 >= 0)
-                l1 = nums1[mid1-1];
-
-            if(mid2 - 1 >= 0)
-                l2 = nums2[mid2-1];
+            if(mid1 < n1) r1 = nums1[mid1];
+            if(mid2 < n2) r2 = nums2[mid2];
+            if(mid1 - 1 >= 0) l1 = nums1[mid1-1];
+            if(mid2 - 1 >= 0) l2 = nums2[mid2-1];
 
             if((l1 <= r2) && (l2 <= r1)){
-
                 if(n % 2 == 1){
                     return Math.max(l1,l2);
                 }else{
-                    return ((double)Math.max(l1,l2) 
-                            + Math.min(r1,r2)) / 2.0;
+                    return ((double)(Math.max(l1,l2)) + (Math.min(r1,r2)))/2.0;
                 }
-
             }else if(l1 > r2){
                 high = mid1-1;
             }else{
@@ -482,175 +116,49 @@ class Solution {
 ### Input
 
 ```text
-nums1 = [1,2]
-nums2 = [3,4]
+nums1 = [1, 2]
+nums2 = [3, 4]
 ```
 
-We have:
+`n1 = 2`, `n2 = 2`. `n1 > n2`? false → no swap needed.
 
-```text
-n1 = 2
-n2 = 2
-```
-
-Since `n1` is not greater than `n2`, we continue.
-
-```text
-low = 0
-high = 2
-```
-
-Total number of elements:
-
-```text
-n = 2 + 2 = 4
-```
-
-Number of elements required on the left:
-
-```text
-left = (2 + 2 + 1) / 2
-     = 2
-```
-
----
+`low = 0`, `high = 2`, `left = (2+2+1)/2 = 5/2 = 2` (integer division), `n = 4`
 
 ### Iteration 1
 
-Calculate:
+`mid1 = (0+2)/2 = 1`, `mid2 = left - mid1 = 2 - 1 = 1`
 
-```text
-mid1 = (0 + 2) / 2
-     = 1
-```
+| Boundary | Condition | Value |
+|----------|-----------|-------|
+|r1|`mid1(1) < n1(2)` → true|`nums1[1] = 2`|
+|r2|`mid2(1) < n2(2)` → true|`nums2[1] = 4`|
+|l1|`mid1-1(0) >= 0` → true|`nums1[0] = 1`|
+|l2|`mid2-1(0) >= 0` → true|`nums2[0] = 3`|
 
-Therefore:
+**Validity check:** `(l1 <= r2) && (l2 <= r1)` → `(1 <= 4) && (3 <= 2)` → `true && false` → **false**
 
-```text
-mid2 = left - mid1
-     = 2 - 1
-     = 1
-```
+`l1 > r2`? `1 > 4` → false → `else`: `low = mid1 + 1 = 2`
 
-The partition is:
-
-```text
-nums1 = [1 | 2]
-
-nums2 = [3 | 4]
-```
-
-So:
-
-```text
-l1 = 1
-r1 = 2
-
-l2 = 3
-r2 = 4
-```
-
-Check:
-
-```text
-l1 <= r2
-1 <= 4  → true
-
-l2 <= r1
-3 <= 2  → false
-```
-
-Therefore, the partition is invalid.
-
-Since:
-
-```text
-l2 > r1
-3 > 2
-```
-
-we need to move the partition in `nums1` to the right:
-
-```text
-low = mid1 + 1
-    = 2
-```
-
----
+State: `low = 2`, `high = 2`
 
 ### Iteration 2
 
-Now:
+`mid1 = (2+2)/2 = 2`, `mid2 = left - mid1 = 2 - 2 = 0`
 
-```text
-low = 2
-high = 2
-```
+| Boundary | Condition | Value |
+|----------|-----------|-------|
+|r1|`mid1(2) < n1(2)` → false|`Integer.MAX_VALUE`|
+|r2|`mid2(0) < n2(2)` → true|`nums2[0] = 3`|
+|l1|`mid1-1(1) >= 0` → true|`nums1[1] = 2`|
+|l2|`mid2-1(-1) >= 0` → false|`Integer.MIN_VALUE`|
 
-Calculate:
+**Validity check:** `(l1 <= r2) && (l2 <= r1)` → `(2 <= 3) && (MIN_VALUE <= MAX_VALUE)` → `true && true` → **true**, valid partition found!
 
-```text
-mid1 = (2 + 2) / 2
-     = 2
-```
+`n % 2 == 1`? `4 % 2 = 0` → false → **even-length case**: return `(Math.max(l1,l2) + Math.min(r1,r2)) / 2.0`
 
-Then:
+`Math.max(2, MIN_VALUE) = 2`, `Math.min(MAX_VALUE, 3) = 3`
 
-```text
-mid2 = 2 - 2
-     = 0
-```
-
-The partition becomes:
-
-```text
-nums1 = [1,2 | ]
-
-nums2 = [ | 3,4]
-```
-
-Therefore:
-
-```text
-l1 = 2
-r1 = Integer.MAX_VALUE
-
-l2 = Integer.MIN_VALUE
-r2 = 3
-```
-
-Check:
-
-```text
-l1 <= r2
-2 <= 3 → true
-
-l2 <= r1
-true
-```
-
-So the partition is correct.
-
-Since:
-
-```text
-n = 4
-```
-
-is even, we take the two middle elements:
-
-```text
-max(l1,l2) = max(2, MIN_VALUE) = 2
-
-min(r1,r2) = min(MAX_VALUE,3) = 3
-```
-
-Therefore:
-
-```text
-median = (2 + 3) / 2
-       = 2.5
-```
+**Return:** `(2 + 3) / 2.0 = 2.5`
 
 Output:
 
@@ -658,239 +166,37 @@ Output:
 2.50000
 ```
 
----
-
-## Another Dry Run
-
-### Input
-
-```text
-nums1 = [1,3]
-nums2 = [2]
-```
-
-Since:
-
-```text
-n1 = 2
-n2 = 1
-```
-
-the smaller array should be searched.
-
-Therefore, the code executes:
-
-```java
-if(n1 > n2){
-    return findMedianSortedArrays(nums2, nums1);
-}
-```
-
-The arrays become conceptually:
-
-```text
-nums1 = [2]
-nums2 = [1,3]
-```
-
-Now:
-
-```text
-n1 = 1
-n2 = 2
-n = 3
-```
-
-Calculate:
-
-```text
-left = (1 + 2 + 1) / 2
-     = 2
-```
-
-Binary search gives the correct partition:
-
-```text
-nums1 = [2 | ]
-
-nums2 = [1 | 3]
-```
-
-Therefore:
-
-```text
-l1 = 2
-l2 = 1
-r1 = MAX_VALUE
-r2 = 3
-```
-
-The partition is valid because:
-
-```text
-2 <= 3
-1 <= MAX_VALUE
-```
-
-Since the total number of elements is odd:
-
-```text
-n = 3
-```
-
-the median is:
-
-```text
-max(l1,l2)
-= max(2,1)
-= 2
-```
-
-Therefore:
-
-```text
-Output = 2.00000
-```
+This matches the expected output. The valid partition places `[1, 2]` in the combined left half and `[3, 4]` in the combined right half — exactly matching the merged array `[1,2,3,4]`, whose median is `(2+3)/2 = 2.5`.
 
 ---
 
 ## Why This Approach Works
 
-The key observation is that we **do not need to actually merge the two sorted arrays**.
+The median of a sorted sequence is defined entirely by where the sequence's "middle" sits — specifically, for a partition of the full merged array into a left half and right half of the correct sizes, the median can be read directly off the boundary between them **as long as that partition is valid** (every left element `<=` every right element), without needing to know the exact order of every element within each half.
 
-A normal merge would take:
+The binary search works because increasing `mid1` (taking more elements from `nums1` into the left half) monotonically affects the boundary values in a predictable direction: it makes `l1` larger (or equal) and `r1` larger (or equal), while `mid2` (forced to `left - mid1`) correspondingly decreases, making `l2` smaller (or equal) and `r2` smaller (or equal). So if `l1 > r2` (too much taken from `nums1`), decreasing `mid1` is the correct direction to search in; the converse holds for the other invalid case. This monotonic relationship is exactly what makes binary search applicable — there's a well-defined "too far one way / too far the other way" structure to search over.
 
-```text
-O(n1 + n2)
-```
-
-time.
-
-Instead, we find a partition such that:
-
-```text
-Left side | Right side
-```
-
-contains exactly half of the combined elements, and:
-
-```text
-max(left side) <= min(right side)
-```
-
-The correct partition guarantees that the elements around the partition are exactly the elements needed to determine the median.
-
-The binary search works because moving the partition in `nums1` changes the partition in `nums2` in the opposite direction.
-
-If:
-
-```text
-l1 > r2
-```
-
-we took too many elements from `nums1`, so move left.
-
-If:
-
-```text
-l2 > r1
-```
-
-we took too few elements from `nums1`, so move right.
-
-Eventually, we find the partition satisfying:
-
-```text
-l1 <= r2 && l2 <= r1
-```
-
-At that point, the median can be obtained directly from the four boundary values.
+Using `Integer.MIN_VALUE`/`MAX_VALUE` as sentinels for boundary values that don't actually exist (because one array contributed nothing to that side of the partition) is what allows the same `l1 <= r2 && l2 <= r1` check to work uniformly, without needing separate handling for the edge cases where `mid1` or `mid2` lands at `0` or at the end of its array.
 
 ---
 
 ## Complexity Analysis
 
-* **Time Complexity:** `O(log(min(n1,n2)))`
-
-  The algorithm always performs binary search on the smaller array. Each iteration cuts the search space approximately in half.
-
-* **Space Complexity:** `O(1)`
-
-  Only a constant number of variables are used, and no merged array or additional data structure is created.
+- **Time Complexity:** `O(log(min(m,n)))` — the binary search operates over the range `[0, n1]` where `n1` is the length of the *shorter* array (guaranteed by the swap at the top), satisfying the required `O(log(m+n))` bound with room to spare
+- **Space Complexity:** `O(1)` — only a fixed set of integer variables is used per call; the one possible recursive call (to ensure `nums1` is the shorter array) happens at most once, so this doesn't accumulate into meaningful extra space
 
 ---
 
 ## Key Insight
 
-The most important idea is:
-
-> **Find the correct partition instead of merging the arrays.**
-
-We divide the combined arrays into two halves:
-
-```text
-        LEFT              RIGHT
-   ─────────────       ─────────────
-      l1   l2             r1   r2
-```
-
-The correct partition satisfies:
-
-```text
-l1 <= r2
-l2 <= r1
-```
-
-Then:
-
-### If total length is odd:
-
-```text
-median = max(l1,l2)
-```
-
-### If total length is even:
-
-```text
-median = (max(l1,l2) + min(r1,r2)) / 2
-```
-
-The complete strategy is:
-
-```text
-Choose smaller array
-        ↓
-Binary search partition
-        ↓
-Calculate mid1 and mid2
-        ↓
-Find l1, r1, l2, r2
-        ↓
-Is partition valid?
-     /          \
-   No            Yes
-   ↓              ↓
-Move left/right  Calculate median
-```
-
-This allows the problem to be solved in the required **`O(log(min(n1,n2)))` time** without actually merging the two arrays.
+This is the canonical `O(log(min(m,n)))` solution to the two-sorted-arrays median problem, and it hinges on reframing "find the median" as "find a valid partition point" rather than "merge and index into the middle." Binary searching over just one array's partition index (with the other array's index forced by the fixed target left-half size) is what collapses what looks like it needs `O(m+n)` merging work down to a logarithmic search — a pattern worth recognizing whenever a problem's answer can be characterized by a single monotonic "partition" or "threshold" property.
 
 ---
 
 ## Concepts Used
 
-* Array
-* Sorted Arrays
-* Binary Search
-* Binary Search on Partition
-* Median
-* Partitioning
-* Two Sorted Arrays
-* Divide and Conquer
-* Boundary Elements
-* `Integer.MIN_VALUE`
-* `Integer.MAX_VALUE`
-* Odd and Even Cases
-* Recursive Array Swapping
-* `O(log(min(n1,n2)))` Optimization
-* Constant Space
+- Array
+- Binary Search
+- Partition-Based Search
+- Sentinel Values (Integer.MIN_VALUE / MAX_VALUE)
+- Divide and Conquer
