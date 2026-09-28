@@ -4,139 +4,72 @@
 
 A conveyor belt has packages that must be shipped from one port to another within `days` days.
 
-The `i`th package on the conveyor belt has a weight of `weights[i]`. Each day, we load the ship with packages from the conveyor belt **in the order given by `weights`**.
+The `ith` package on the conveyor belt has a weight of `weights[i]`. Each day, we load the ship with packages on the conveyor belt (in the order given by `weights`). We may not load more weight than the maximum weight capacity of the ship.
 
-We may not load more weight than the maximum weight capacity of the ship.
-
-Return the **least weight capacity of the ship** that will result in all the packages being shipped within `days` days.
+Return the least weight capacity of the ship that will result in all the packages on the conveyor belt being shipped within `days` days.
 
 ---
 
 ## Example 1:
-
-```text
+```
 Input: weights = [1,2,3,4,5,6,7,8,9,10], days = 5
-
 Output: 15
-
-Explanation:
-A ship capacity of 15 is the minimum to ship all the packages in 5 days like this:
-
+Explanation: A ship capacity of 15 is the minimum to ship all the packages in 5 days like this:
 1st day: 1, 2, 3, 4, 5
 2nd day: 6, 7
 3rd day: 8
 4th day: 9
 5th day: 10
+
+Note that the cargo must be shipped in the order given, so using a ship of capacity 14 and splitting the packages into parts like (2, 3, 4, 5), (1, 6, 7), (8), (9), (10) is not allowed.
 ```
 
-Note that the cargo must be shipped in the order given, so using a ship of capacity 14 and splitting the packages into parts like `(2, 3, 4, 5), (1, 6, 7), (8), (9), (10)` is not allowed.
-
 ## Example 2:
-
-```text
+```
 Input: weights = [3,2,2,4,1,4], days = 3
-
 Output: 6
-
-Explanation:
-A ship capacity of 6 is the minimum to ship all the packages in 3 days like this:
-
+Explanation: A ship capacity of 6 is the minimum to ship all the packages in 3 days like this:
 1st day: 3, 2
 2nd day: 2, 4
 3rd day: 1, 4
 ```
 
 ## Example 3:
-
-```text
+```
 Input: weights = [1,2,3,1,1], days = 4
-
 Output: 3
-
 Explanation:
-1st day: 1, 2
-2nd day: 3
-3rd day: 1, 1
-4th day: 1
+1st day: 1
+2nd day: 2
+3rd day: 3
+4th day: 1, 1
 ```
 
 ## Constraints:
-
-* `1 <= days <= weights.length <= 5 * 10^4`
-* `1 <= weights[i] <= 500`
+- `1 <= days <= weights.length <= 5 * 10^4`
+- `1 <= weights[i] <= 500`
 
 ---
 
 ## Approach
 
-This solution uses **binary search on the answer**.
-
-Instead of trying every possible ship capacity, we search for the minimum capacity that can ship all packages within the given number of days.
+This solution uses **binary search on the answer itself** — the ship's capacity. Rather than searching through the input array, it searches through the range of *possible capacities*, and for each candidate capacity checks (with a simple greedy simulation) how many days would be needed to ship everything. Since a larger capacity can never need *more* days than a smaller one, the "feasible / not feasible" outcome is monotonic across capacities, which is exactly the structure binary search needs.
 
 ### Idea
 
-* The **minimum possible capacity** is the weight of the heaviest package because the ship must be able to carry every individual package.
-
-  ```text
-  start = maximum weight in weights
-  ```
-
-* The **maximum possible capacity** is the sum of all package weights because, with this capacity, all packages could theoretically be shipped in one day.
-
-  ```text
-  end = sum of all weights
-  ```
-
-* For every possible capacity `mid`, use the helper method `range(weights, mid)` to calculate how many days are required.
-
-* The helper processes packages **in their original order**:
-
-  * Keep adding package weights to the current day.
-  * If adding the next package would make the total exceed `mid`, start a new day.
-  * Continue until all packages are processed.
-
-* **Binary search decision:**
-
-  * If the required number of days is `<= days`, then the current capacity is sufficient. We try a **smaller capacity** by moving `end` to `mid - 1`.
-  * If the required number of days is `> days`, the capacity is too small. We need a **larger capacity**, so move `start` to `mid + 1`.
-
-* When the binary search finishes, `start` represents the **smallest valid ship capacity**.
-
-### Why the Search Range Is Correct
-
-Suppose:
-
-```text
-weights = [1,2,3,4,5]
-```
-
-The heaviest package is `5`, so a capacity smaller than `5` is impossible.
-
-Therefore:
-
-```text
-start = 5
-```
-
-The total weight is:
-
-```text
-1 + 2 + 3 + 4 + 5 = 15
-```
-
-A capacity of `15` can ship everything in one day.
-
-Therefore:
-
-```text
-end = 15
-```
-
-So the answer must lie between:
-
-```text
-5 <= answer <= 15
-```
+- **Determine the search range for capacity:**
+  - The **minimum** possible capacity (`start`) is the **heaviest single package** (`Math.max` over all weights) — a ship that can't carry even the heaviest package alone could never ship it at all.
+  - The **maximum** useful capacity (`end`) is the **sum of all weights** — a ship this large ships everything in a single day, so no larger capacity could ever be needed.
+- **Binary search loop**, `while(start <= end)`:
+  - `mid = start + (end - start) / 2` — the candidate capacity to test.
+  - `result = range(weights, mid)` — the helper computes the **number of days needed** to ship all packages, in order, with a ship of capacity `mid`.
+  - **If `result <= days`**, this capacity is *sufficient* (ships everything within the allowed days) — but a smaller capacity might also work, so try the left half: `end = mid - 1`.
+  - **Otherwise** (`result > days`), this capacity is *too small* (would take too many days) — need a larger capacity: `start = mid + 1`.
+- Once the search ends, `start` sits at the **smallest capacity that was ever found sufficient** (since every sufficient `mid` pushed `end` down below it, and every insufficient one pushed `start` up past it). Return `start`.
+- **`range(arr, mid)` helper** — a greedy simulation of loading the ship day by day, in the order given:
+  - Keep a running `count` for the current day's load, starting at `0`, and `day = 1` (the first day).
+  - For each package `num`: if adding it would exceed the capacity (`count + num > mid`), the current day is full — start a **new day** (`day++`) and begin it with this package (`count = num`). Otherwise, load it onto the current day (`count += num`).
+  - Return `day` — the total number of days used.
 
 ---
 
@@ -144,9 +77,7 @@ So the answer must lie between:
 
 ```java
 class Solution {
-
     public int shipWithinDays(int[] weights, int days) {
-
         int start = 0;
         int end = 0;
 
@@ -156,9 +87,7 @@ class Solution {
         }
 
         while(start <= end){
-
             int mid = start + (end-start)/2;
-
             int result = range(weights, mid);
 
             if(result <= days){
@@ -167,17 +96,13 @@ class Solution {
                 start = mid+1;
             }
         }
-
         return start;
     }
 
     private int range(int[] arr, int mid){
-
         int count = 0;
         int day = 1;
-
         for(int num : arr){
-
             if(count + num > mid){
                 day++;
                 count = num;
@@ -198,183 +123,126 @@ class Solution {
 ### Input
 
 ```text
-weights = [1,2,3,4,5,6,7,8,9,10]
-days = 5
+weights = [3, 2, 2, 4, 1, 4]
+days = 3
 ```
 
-First find the binary search range:
+### Phase 1 — Determine the search range
+
+| weight | start = max(start, weight) | end += weight |
+|--------|-------------------------------|-----------------|
+|3|3|3|
+|2|3|5|
+|2|3|7|
+|4|4|11|
+|1|4|12|
+|4|4|16|
+
+`start = 4` (heaviest package), `end = 16` (total weight)
+
+### Phase 2 — Binary search over capacity
+
+**Iteration 1:** `start(4) <= end(16)` → runs. `mid = 4 + (16-4)/2 = 10`
+
+`range(weights, 10)` — greedy load with capacity 10:
+
+| Package | count + num | > 10? | Action | day | count |
+|---------|---------------|--------|--------|-----|-------|
+|3|0+3 = 3|no|`count += 3`|1|3|
+|2|3+2 = 5|no|`count += 2`|1|5|
+|2|5+2 = 7|no|`count += 2`|1|7|
+|4|7+4 = 11|**yes**|`day++`, `count = 4`|2|4|
+|1|4+1 = 5|no|`count += 1`|2|5|
+|4|5+4 = 9|no|`count += 4`|2|9|
+
+Returns `day = 2` (groups: `[3,2,2] | [4,1,4]`). `result(2) <= days(3)` → true → `end = mid - 1 = 9`
+
+**Iteration 2:** `start(4) <= end(9)` → runs. `mid = 4 + (9-4)/2 = 6`
+
+`range(weights, 6)` — capacity 6:
+
+| Package | count + num | > 6? | Action | day | count |
+|---------|---------------|-------|--------|-----|-------|
+|3|0+3 = 3|no|`count += 3`|1|3|
+|2|3+2 = 5|no|`count += 2`|1|5|
+|2|5+2 = 7|**yes**|`day++`, `count = 2`|2|2|
+|4|2+4 = 6|no (`6 > 6` false)|`count += 4`|2|6|
+|1|6+1 = 7|**yes**|`day++`, `count = 1`|3|1|
+|4|1+4 = 5|no|`count += 4`|3|5|
+
+Returns `day = 3` (groups: `[3,2] | [2,4] | [1,4]`). `result(3) <= days(3)` → true → `end = mid - 1 = 5`
+
+**Iteration 3:** `start(4) <= end(5)` → runs. `mid = 4 + (5-4)/2 = 4`
+
+`range(weights, 4)` — capacity 4:
+
+| Package | count + num | > 4? | Action | day | count |
+|---------|---------------|-------|--------|-----|-------|
+|3|0+3 = 3|no|`count += 3`|1|3|
+|2|3+2 = 5|**yes**|`day++`, `count = 2`|2|2|
+|2|2+2 = 4|no|`count += 2`|2|4|
+|4|4+4 = 8|**yes**|`day++`, `count = 4`|3|4|
+|1|4+1 = 5|**yes**|`day++`, `count = 1`|4|1|
+|4|1+4 = 5|**yes**|`day++`, `count = 4`|5|4|
+
+Returns `day = 5` (groups: `[3] | [2,2] | [4] | [1] | [4]`). `result(5) <= days(3)` → false → `start = mid + 1 = 5`
+
+**Iteration 4:** `start(5) <= end(5)` → runs. `mid = 5 + (5-5)/2 = 5`
+
+`range(weights, 5)` — capacity 5:
+
+| Package | count + num | > 5? | Action | day | count |
+|---------|---------------|-------|--------|-----|-------|
+|3|0+3 = 3|no|`count += 3`|1|3|
+|2|3+2 = 5|no (`5 > 5` false)|`count += 2`|1|5|
+|2|5+2 = 7|**yes**|`day++`, `count = 2`|2|2|
+|4|2+4 = 6|**yes**|`day++`, `count = 4`|3|4|
+|1|4+1 = 5|no|`count += 1`|3|5|
+|4|5+4 = 9|**yes**|`day++`, `count = 4`|4|4|
+
+Returns `day = 4` (groups: `[3,2] | [2] | [4,1] | [4]`). `result(4) <= days(3)` → false → `start = mid + 1 = 6`
+
+**Loop check:** `start(6) <= end(5)`? false → loop exits.
+
+**Return:** `start = 6`
+
+Output:
 
 ```text
-start = maximum weight = 10
-end = sum of all weights = 55
+6
 ```
 
-So:
-
-```text
-10 <= answer <= 55
-```
-
-### Binary Search
-
-| start | end | mid | Days Required | `result <= days`? | Action       |
-| ----- | --- | --- | ------------- | ----------------- | ------------ |
-| 10    | 55  | 32  | 2             | Yes               | `end = 31`   |
-| 10    | 31  | 20  | 3             | Yes               | `end = 19`   |
-| 10    | 19  | 14  | 6             | No                | `start = 15` |
-| 15    | 19  | 17  | 4             | Yes               | `end = 16`   |
-| 15    | 16  | 15  | 5             | Yes               | `end = 14`   |
-
-Now:
-
-```text
-start = 15
-end = 14
-```
-
-Since:
-
-```text
-start > end
-```
-
-the binary search stops.
-
-Therefore:
-
-```text
-Output = 15
-```
-
----
-
-## Detailed Dry Run of `range()`
-
-Let's understand why a capacity of `15` requires exactly `5` days.
-
-```text
-weights = [1,2,3,4,5,6,7,8,9,10]
-mid = 15
-```
-
-Initially:
-
-```text
-count = 0
-day = 1
-```
-
-| Package | Current `count` | `count + package` | Action  | New `count` | Day |
-| ------- | --------------- | ----------------- | ------- | ----------- | --- |
-| 1       | 0               | 1                 | Add     | 1           | 1   |
-| 2       | 1               | 3                 | Add     | 3           | 1   |
-| 3       | 3               | 6                 | Add     | 6           | 1   |
-| 4       | 6               | 10                | Add     | 10          | 1   |
-| 5       | 10              | 15                | Add     | 15          | 1   |
-| 6       | 15              | 21                | New day | 6           | 2   |
-| 7       | 6               | 13                | Add     | 13          | 2   |
-| 8       | 13              | 21                | New day | 8           | 3   |
-| 9       | 8               | 17                | New day | 9           | 4   |
-| 10      | 9               | 19                | New day | 10          | 5   |
-
-Therefore:
-
-```text
-Required days = 5
-```
-
-Since:
-
-```text
-5 <= 5
-```
-
-a capacity of `15` is sufficient.
+This matches the expected output — capacity `6` is the smallest that gets everything shipped within `3` days (capacity `5` needs `4` days, capacity `6` needs exactly `3`).
 
 ---
 
 ## Why This Approach Works
 
-The important observation is that the required number of days is **monotonic** with respect to ship capacity.
+The critical property is **monotonicity**: if a ship of capacity `C` can ship everything within `days` days, then any capacity larger than `C` can too (extra capacity can only help or make no difference, never hurt). Symmetrically, if capacity `C` is too small, every smaller capacity is also too small. This means the set of feasible capacities forms a clean "everything from some threshold upward" range, and the problem reduces to finding that threshold — precisely what binary search over the answer space does.
 
-For example:
+Each candidate capacity is evaluated by a **greedy** simulation (`range`) that's provably optimal for a fixed capacity: since packages must be shipped in the given order and a day can be extended as long as the next package fits, always packing as much as possible into the current day before starting a new one uses the minimum possible number of days for that capacity. If even this best-case packing exceeds `days`, that capacity is definitively infeasible.
 
-```text
-Small capacity  -> More days required
-Large capacity  -> Fewer days required
-```
-
-If a capacity of `15` is sufficient to ship all packages within `5` days, then any capacity greater than `15` will also be sufficient.
-
-Similarly, if a capacity of `14` requires more than `5` days, then every capacity smaller than `14` will also require more than `5` days.
-
-This creates a pattern like:
-
-```text
-Invalid Invalid Invalid | Valid Valid Valid
-          ↑
-     Minimum Answer
-```
-
-Because of this monotonic behavior, **binary search** can efficiently find the smallest valid capacity.
-
-The `range()` helper also preserves the package order. Whenever adding the next package would exceed the current capacity, it starts a new day instead of rearranging or skipping packages.
+The lower bound of the search (`max(weights)`) guarantees no candidate capacity is ever smaller than the heaviest single package, which would make the greedy simulation's assumption (every package can be loaded on *some* day by itself) invalid. The upper bound (`sum(weights)`) is a safe cap, since it always ships everything in exactly one day.
 
 ---
 
 ## Complexity Analysis
 
-* **Time Complexity:** `O(n log(sum(weights)))`
-
-  The binary search performs approximately `O(log(sum(weights)))` iterations, and for each iteration the `range()` method scans all `n` packages.
-
-* **Space Complexity:** `O(1)`
-
-  Only a constant number of variables are used. No extra array or data structure is required.
+- **Time Complexity:** `O(n * log(S))` — where `n` is the number of packages and `S` is the sum of all weights (the size of the capacity search range); the binary search performs `O(log S)` iterations, and each iteration runs the `O(n)` greedy `range` simulation
+- **Space Complexity:** `O(1)` — only a fixed set of integer variables is used, no auxiliary arrays or data structures
 
 ---
 
 ## Key Insight
 
-This problem is a classic example of **Binary Search on the Answer**.
-
-Instead of searching for an index or element, we search for the **minimum possible ship capacity**.
-
-The key steps are:
-
-```text
-Minimum capacity = maximum package weight
-Maximum capacity = total weight of all packages
-```
-
-For every candidate capacity:
-
-```text
-Candidate capacity
-        ↓
-Calculate required days
-        ↓
-Required days <= given days?
-       / \
-     Yes  No
-      ↓    ↓
-Search   Search
-left     right
-```
-
-The helper function `range()` acts as the **feasibility check**, determining whether a particular capacity can ship all packages within the required number of days.
+This is the canonical **"binary search on the answer"** pattern: when the question is "what's the minimum (or maximum) value of some parameter such that a condition holds," and the condition is monotonic in that parameter (feasible for all values beyond some threshold), binary searching over the parameter's *range of possible values* — with a separate `O(n)` feasibility check per candidate — is often far more efficient than any direct construction. Recognizing this shape (a monotonic feasibility check combined with an optimization target) is the key skill.
 
 ---
 
 ## Concepts Used
 
-* Array
-* Binary Search
-* Binary Search on the Answer
-* Monotonic Feasibility Function
-* Greedy Approach
-* Capacity / Partitioning
-* Simulation
-* Order Preservation
-* Helper Function
-* Time Complexity Optimization
+- Array
+- Binary Search on Answer
+- Greedy Simulation (Feasibility Check)
+- Monotonic Predicate
+- Helper Function Decomposition
