@@ -1,287 +1,184 @@
-# LeetCode 260 – Single Number III
+# LeetCode 260 - Single Number III
 
-## Problem
+## Problem Statement
 
-Given an integer array `nums` where **exactly two elements appear only once** and **all other elements appear exactly twice**, return the two elements that appear only once.
+Given an integer array `nums`, in which exactly two elements appear only once and all the other elements appear exactly twice. Find the two elements that appear only once. You can return the answer in **any order**.
 
-The solution must run in **O(n)** time and use **O(1)** extra space.
+You must write an algorithm that runs in linear runtime complexity and uses only constant extra space.
 
-## Concepts Used
+---
 
-### 1. XOR (Exclusive OR)
-
-XOR has the following important properties.
-
-| Expression                         | Result                |
-| ---------------------------------- | --------------------- |
-| `a ^ 0`                            | `a`                   |
-| `a ^ a`                            | `0`                   |
-| `a ^ b ^ a`                        | `b`                   |
-| XOR is associative and commutative | Order does not matter |
-
-Since every duplicate number appears twice,
-
-```text
-x ^ x = 0
+## Example 1:
+```
+Input: nums = [1,2,1,3,2,5]
+Output: [3,5]
+Explanation: [5, 3] is also a valid answer.
 ```
 
-all duplicate numbers cancel out.
-
-### 2. XOR of All Elements
-
-If the two unique numbers are `A` and `B`, then
-
-```text
-ans = A ^ B
+## Example 2:
+```
+Input: nums = [-1,0]
+Output: [-1,0]
 ```
 
-because every duplicate disappears.
-
-This XOR result is **not enough to identify A and B directly**, but it tells us that **A and B differ in at least one bit**.
-
-### 3. Rightmost Set Bit
-
-To separate the two unique numbers, find any bit where they differ.
-
-The easiest choice is the **rightmost set bit**.
-
-```java
-int rightMost = (ans & (ans - 1)) ^ ans;
+## Example 3:
+```
+Input: nums = [0,1]
+Output: [1,0]
 ```
 
-This extracts the lowest set bit.
+## Constraints:
+- `2 <= nums.length <= 3 * 10^4`
+- `-2^31 <= nums[i] <= 2^31 - 1`
+- Each integer in `nums` will appear twice, only two integers will appear once.
 
-Example:
+---
 
-```text
-ans = 6 (0110)
+## Approach
 
-ans - 1 = 5 (0101)
+This solution uses **XOR plus a partitioning bit**. XOR-ing the entire array cancels every pair and leaves `x ^ y`, where `x` and `y` are the two unique numbers. Since `x` and `y` are different, that result has at least one `1` bit, marking a position where they disagree. Splitting the array into two groups by that bit separates `x` from `y`, and XOR-ing each group on its own reveals each number.
 
-0110 & 0101 = 0100
+### Idea
 
-0100 ^ 0110 = 0010
-```
+- **Step 1 — XOR everything:** `ans = ans ^ nums[i]` across the whole array. Every number that appears twice cancels itself out (`n ^ n = 0`), so `ans` ends up equal to `x ^ y`.
+- **Step 2 — pick a bit where `x` and `y` differ:** `rightMost = (ans & (ans - 1)) ^ ans`. The expression `ans & (ans - 1)` clears the lowest set bit of `ans`; XOR-ing that with `ans` then leaves *only* that lowest set bit. Because `ans = x ^ y`, a set bit means exactly one of `x` or `y` has that bit set. (Note: in Java, `ans & ans-1` evaluates as `ans & (ans-1)`, since subtraction binds tighter than `&`.)
+- **Step 3 — partition and XOR separately:** loop through `nums` again, keeping two accumulators `a` and `b`:
+  - If `(nums[i] & rightMost) == 0` (the chosen bit is `0`), fold it into `a`: `a = a ^ nums[i]`.
+  - Otherwise (the bit is `1`), fold it into `b`: `b = b ^ nums[i]`.
+- Return `new int[]{a, b}`.
 
-So
+---
 
-```text
-rightMost = 2 (0010)
-```
-
-### 4. Bit Partitioning
-
-Using the rightmost set bit, divide numbers into two groups.
-
-* Group 1: bit is **0**
-* Group 2: bit is **1**
-
-Since `A` and `B` differ at this bit, they must fall into **different groups**.
-
-All duplicate numbers fall into the **same group as their duplicate**, so they cancel out.
-
-## Idea
-
-1. XOR all numbers → `ans = A ^ B`.
-2. Find the **rightmost set bit**.
-3. Partition numbers into two groups using that bit.
-4. XOR each group separately.
-5. The two XOR results are the required unique numbers.
-
-## Java Solution
+## Code
 
 ```java
 class Solution {
     public int[] singleNumber(int[] nums) {
         int ans = 0;
 
-        for (int num : nums) {
-            ans ^= num;
+        for(int i = 0 ; i < nums.length ; i++){
+            ans = ans ^ nums[i];
         }
 
-        int rightMost = (ans & (ans - 1)) ^ ans;
-
+        int rightMost = (ans & ans-1) ^ ans;
         int a = 0;
         int b = 0;
 
-        for (int num : nums) {
-            if ((num & rightMost) == 0) {
-                a ^= num;
-            } else {
-                b ^= num;
+        for(int i = 0 ; i < nums.length ; i++){
+            if((nums[i] & rightMost) == 0){
+                a = a ^ nums[i];
+            }else{
+                b = b ^ nums[i];
             }
         }
 
-        return new int[]{a, b};
+        return new int[]{a,b};
     }
 }
 ```
 
+---
+
 ## Dry Run
 
-Example:
+### Input (Example 1)
 
 ```text
-nums = [1,2,1,3,2,5]
+nums = [1, 2, 1, 3, 2, 5]
 ```
 
-### Step 1: XOR all numbers
+Binary reference: `1 = 001`, `2 = 010`, `3 = 011`, `5 = 101`
 
-```text
-ans = 1 ^ 2 ^ 1 ^ 3 ^ 2 ^ 5
+### Phase 1 — XOR the whole array
 
-= (1 ^ 1) ^ (2 ^ 2) ^ (3 ^ 5)
+| i | nums[i] | ans = ans ^ nums[i] |
+|---|---------|------------------------|
+|0|1 (`001`)|`000 ^ 001 = 001` (1)|
+|1|2 (`010`)|`001 ^ 010 = 011` (3)|
+|2|1 (`001`)|`011 ^ 001 = 010` (2)|
+|3|3 (`011`)|`010 ^ 011 = 001` (1)|
+|4|2 (`010`)|`001 ^ 010 = 011` (3)|
+|5|5 (`101`)|`011 ^ 101 = 110` (6)|
 
-= 0 ^ 0 ^ 6
+`ans = 110 = 6`, which is exactly `3 ^ 5` (`011 ^ 101 = 110`).
 
-= 6
-```
+### Phase 2 — Isolate the lowest set bit
 
-So
+| Step | Calculation | Result |
+|------|-------------|--------|
+|`ans - 1`|`110 - 1`|`101` (5)|
+|`ans & (ans - 1)`|`110 & 101`|`100` (4)|
+|`rightMost = (ans & (ans-1)) ^ ans`|`100 ^ 110`|`010` (2)|
 
-```text
-ans = 6 (0110)
-```
+`rightMost = 010 = 2` — the bit at position 1 is where `3` (`011`) and `5` (`101`) differ.
 
-### Step 2: Find rightmost set bit
+### Phase 3 — Partition by that bit and XOR each group
 
-```text
-rightMost = (6 & 5) ^ 6
+`a = 0`, `b = 0`
 
-= (0110 & 0101) ^ 0110
+| i | nums[i] | nums[i] & `010` | Group | Update |
+|---|---------|--------------------|-------|--------|
+|0|1 (`001`)|`000` = 0|a|`a = 0 ^ 1 = 1`|
+|1|2 (`010`)|`010` ≠ 0|b|`b = 0 ^ 2 = 2`|
+|2|1 (`001`)|`000` = 0|a|`a = 1 ^ 1 = 0`|
+|3|3 (`011`)|`010` ≠ 0|b|`b = 2 ^ 3 = 1`|
+|4|2 (`010`)|`010` ≠ 0|b|`b = 1 ^ 2 = 3`|
+|5|5 (`101`)|`000` = 0|a|`a = 0 ^ 5 = 5`|
 
-= 0100 ^ 0110
+Group `a` contained `{1, 1, 5}` → `5`. Group `b` contained `{2, 3, 2}` → `3`.
 
-= 0010
-```
+**Return:** `[5, 3]`
 
-So
-
-```text
-rightMost = 2
-```
-
-### Step 3: Partition numbers
-
-Bit `0010` is checked.
-
-| Number | Binary | `num & 2` | Group |
-| ------ | ------ | --------- | ----- |
-| 1      | 0001   | 0         | A     |
-| 2      | 0010   | 2         | B     |
-| 1      | 0001   | 0         | A     |
-| 3      | 0011   | 2         | B     |
-| 2      | 0010   | 2         | B     |
-| 5      | 0101   | 0         | A     |
-
-### Step 4: XOR each group
-
-Group A:
-
-```text
-1 ^ 1 ^ 5
-
-= 5
-```
-
-Group B:
-
-```text
-2 ^ 3 ^ 2
-
-= 3
-```
-
-Final answer:
+Output:
 
 ```text
 [5,3]
 ```
 
-(or `[3,5]`)
+This matches the expected output — the problem explicitly notes `[5, 3]` is also a valid answer, since order doesn't matter.
 
-## Why the Rightmost Set Bit Works
-
-Suppose
+### Example 2 check — negative numbers
 
 ```text
-A = 3 = 0011
-B = 5 = 0101
+nums = [-1, 0]
 ```
 
-Then
+`ans = -1 ^ 0 = -1` (all bits set). `ans - 1 = -2`, `ans & (ans-1) = -1 & -2 = -2`, and `rightMost = -2 ^ -1 = 1`. Then `-1 & 1 = 1` (non-zero) → `b = -1`, and `0 & 1 = 0` → `a = 0`. Result `[0, -1]`, a valid ordering of `[-1, 0]`.
 
-```text
-A ^ B = 0110
-```
+---
 
-The rightmost set bit is
+## Why This Approach Works
 
-```text
-0010
-```
+Pairs cancel under XOR, so after Step 1 the only thing left is `x ^ y`. If `x ^ y` has a `1` in some bit position, then one of `x`, `y` has a `1` there and the other has a `0` — so that bit **cleanly separates the two unique numbers**. And since `x ≠ y` is guaranteed, `x ^ y` can never be `0`, so such a bit always exists.
 
-Checking that bit:
+Splitting `nums` by that bit achieves two things simultaneously:
 
-```text
-3 & 2 = 2
+- `x` and `y` land in **different** groups (that's what "differ at this bit" means).
+- Each duplicate pair lands **together** in the same group, because two equal numbers have identical bits everywhere, including this one.
 
-5 & 2 = 0
-```
+So within each group, every duplicate pair still cancels out under XOR, leaving exactly one unique number per group — no further bookkeeping needed.
 
-They go into different groups.
+Extracting the lowest set bit with `(ans & (ans - 1)) ^ ans` is a standard bit trick: subtracting `1` flips the lowest `1` and everything below it, so ANDing with the original clears just that bit, and XOR-ing back isolates it. This also stays correct for negative values and for the edge case `ans = Integer.MIN_VALUE`, thanks to two's-complement wraparound (`MIN_VALUE - 1` wraps to `MAX_VALUE`, giving `rightMost = MIN_VALUE`, which is indeed its lowest set bit).
 
-This guarantees that the two unique numbers are separated.
+---
 
-## Time Complexity
+## Complexity Analysis
 
-* First XOR pass: **O(n)**
-* Second partition pass: **O(n)**
+- **Time Complexity:** `O(n)` — two linear passes over the array, with constant bitwise work per element
+- **Space Complexity:** `O(1)` — only a handful of integer variables are used, no auxiliary arrays or hash sets, satisfying the constant-space requirement
 
-Total:
+---
 
-* **O(n)**
+## Key Insight
 
-## Space Complexity
+This builds directly on Single Number (136): when *one* element is unique, XOR-ing everything finds it. With *two* unique elements, a single XOR only gives their combination, so the trick is to use one differing bit to split the problem into **two independent copies of the single-unique-element problem**, each solvable with a plain XOR.
 
-Only a few variables are used.
+---
 
-* **O(1)**
+## Concepts Used
 
-## Pattern Recognition
-
-This problem belongs to:
-
-* **Bit Manipulation**
-* **XOR**
-* **Bit Masking**
-* **Partition by Set Bit**
-
-## Interview Takeaway
-
-Whenever a problem says:
-
-* every number appears twice except **two unique numbers**
-* linear time
-* constant extra space
-
-think of this pattern:
-
-1. XOR all numbers.
-2. Extract a distinguishing set bit.
-3. Partition the array.
-4. XOR each partition separately.
-
-The key formula to remember is:
-
-```java
-int rightMost = (xor & (xor - 1)) ^ xor;
-```
-
-or equivalently
-
-```java
-int rightMost = xor & -xor;
-```
-
-This is one of the most important **XOR partitioning techniques** in coding interviews.
+- Array
+- Bit Manipulation (XOR)
+- Lowest Set Bit Extraction
+- Partitioning by a Differentiating Bit
+- Constant Space Algorithm
