@@ -1,75 +1,53 @@
-# LeetCode 152 – Maximum Product Subarray
+# LeetCode 152 - Maximum Product Subarray
 
-## Problem
+## Problem Statement
 
-Given an integer array `nums`, find the **contiguous subarray** that has the largest product and return that product.
+Given an integer array `nums`, find a subarray that has the largest product, and return *the product*.
 
-The answer is guaranteed to fit in a **32-bit integer**.
+The test cases are generated so that the answer will fit in a **32-bit** integer.
 
-## Concepts Used
+**Note** that the product of an array with a single element is the value of that element.
 
-### 1. Prefix Product
+---
 
-The prefix product is the product of elements from the beginning of the array.
-
-```text
-prefix = nums[0] × nums[1] × ... × nums[i]
+## Example 1:
+```
+Input: nums = [2,3,-2,4]
+Output: 6
+Explanation: [2,3] has the largest product 6.
 ```
 
-### 2. Suffix Product
-
-The suffix product is the product of elements from the end of the array.
-
-```text
-suffix = nums[n-1] × nums[n-2] × ... × nums[i]
+## Example 2:
+```
+Input: nums = [-2,0,-1]
+Output: 0
+Explanation: The result cannot be 2, because [-2,-1] is not a subarray.
 ```
 
-### 3. Effect of Negative Numbers
+## Constraints:
+- `1 <= nums.length <= 2 * 10^4`
+- `-10 <= nums[i] <= 10`
+- The product of any subarray of `nums` is **guaranteed** to fit in a **32-bit** integer.
 
-This is the key concept.
+---
 
-* **Even number of negative numbers** → product becomes **positive**.
-* **Odd number of negative numbers** → product becomes **negative**.
+## Approach
 
-The maximum product subarray may start from the left **or** from the right.
+This solution runs a **prefix product from the left and a suffix product from the right at the same time**, in a single loop. Both running products are compared against the best answer seen so far, and each one is reset to `1` the moment it hits `0`, so that a zero cleanly splits the array into independent segments.
 
-### 4. Effect of Zero
+### Idea
 
-A zero breaks the product.
+- Initialize `totalMax = Integer.MIN_VALUE` (so even an all-negative array is handled correctly), and `prefix = 1`, `suffix = 1`.
+- **Loop** `for(int i = 0; i < nums.length; i++)`:
+  - `prefix = prefix * nums[i]` — extend the running product walking **left to right**.
+  - `suffix = suffix * nums[nums.length - 1 - i]` — extend the running product walking **right to left** (at step `i`, this reads the `i`th element from the end).
+  - **Record the best so far:** if `prefix > totalMax`, update `totalMax = prefix`; likewise for `suffix`.
+  - **Reset on zero:** if `prefix == 0`, set `prefix = 1`; if `suffix == 0`, set `suffix = 1`. This happens *after* the `totalMax` updates, so a `0` itself can still be recorded as the answer (when it's genuinely the best available) before the product restarts for the next segment.
+- Return `totalMax`.
 
-Example:
+---
 
-```text
-2 × 3 × 0 × 4 × 5
-```
-
-The product before and after zero are independent.
-
-Therefore, whenever the running product becomes `0`, we reset it to `1`.
-
-## Idea
-
-Traverse the array **from both directions simultaneously**.
-
-Maintain:
-
-* `prefix` → left to right product
-* `suffix` → right to left product
-
-At each index:
-
-1. Update prefix product.
-2. Update suffix product.
-3. Update the maximum product.
-4. Reset prefix or suffix to `1` if it becomes `0`.
-
-This automatically handles:
-
-* odd negative counts,
-* even negative counts,
-* zeros.
-
-## Java Solution
+## Code
 
 ```java
 class Solution {
@@ -78,18 +56,21 @@ class Solution {
         int prefix = 1;
         int suffix = 1;
 
-        for (int i = 0; i < nums.length; i++) {
-
-            prefix *= nums[i];
-            suffix *= nums[nums.length - 1 - i];
-
-            totalMax = Math.max(totalMax, Math.max(prefix, suffix));
-
-            if (prefix == 0)
+        for(int i = 0 ; i < nums.length ; i++){
+            prefix = prefix * nums[i];
+            suffix = suffix * nums[nums.length-1-i];
+            if(prefix > totalMax){
+                totalMax = prefix;
+            }
+            if(suffix > totalMax){
+                totalMax = suffix;
+            }
+            if(prefix == 0){
                 prefix = 1;
-
-            if (suffix == 0)
+            }
+            if(suffix == 0){
                 suffix = 1;
+            }
         }
 
         return totalMax;
@@ -97,132 +78,97 @@ class Solution {
 }
 ```
 
+---
+
 ## Dry Run
 
-Example:
+### Input (Example 1)
 
 ```text
-nums = [2,3,-2,4]
+nums = [2, 3, -2, 4]
+index:  0  1   2  3
 ```
 
-| i | prefix | suffix | totalMax |
-| - | ------ | ------ | -------- |
-| 0 | 2      | 4      | 4        |
-| 1 | 6      | -8     | 6        |
-| 2 | -12    | -24    | 6        |
-| 3 | -48    | -48    | 6        |
+`totalMax = MIN`, `prefix = 1`, `suffix = 1`
 
-Return:
+| i | Element read for prefix | Element read for suffix | prefix after | suffix after | totalMax after | Reset? |
+|---|---------------------------|----------------------------|--------------|--------------|-----------------|--------|
+|0|`nums[0] = 2`|`nums[3] = 4`|`1 * 2 = 2`|`1 * 4 = 4`|2, then 4 → **4**|no|
+|1|`nums[1] = 3`|`nums[2] = -2`|`2 * 3 = 6`|`4 * -2 = -8`|`6 > 4` → **6**; `-8 > 6`? no|no|
+|2|`nums[2] = -2`|`nums[1] = 3`|`6 * -2 = -12`|`-8 * 3 = -24`|6 (neither beats it)|no|
+|3|`nums[3] = 4`|`nums[0] = 2`|`-12 * 4 = -48`|`-24 * 2 = -48`|6 (neither beats it)|no|
+
+**Loop check:** `i(4) < nums.length(4)`? false → loop exits.
+
+**Return:** `totalMax = 6`
+
+Output:
 
 ```text
 6
 ```
 
-Subarray:
+This matches the expected output — the best product comes from the prefix `[2,3]`, which the left-to-right scan captured at `i = 1`.
+
+### Input (Example 2 — exercises the zero reset)
 
 ```text
-[2,3]
+nums = [-2, 0, -1]
+index:   0  1   2
 ```
 
-## Example with Zero
+`totalMax = MIN`, `prefix = 1`, `suffix = 1`
 
-```text
-nums = [-2,0,-1]
-```
+| i | Element read for prefix | Element read for suffix | prefix after multiply | suffix after multiply | totalMax after | Reset? |
+|---|---------------------------|----------------------------|------------------------|------------------------|-----------------|--------|
+|0|`nums[0] = -2`|`nums[2] = -1`|`-2`|`-1`|`-2 > MIN` → -2; `-1 > -2` → **-1**|no|
+|1|`nums[1] = 0`|`nums[1] = 0`|`0`|`0`|`0 > -1` → **0**; `0 > 0`? no|prefix → 1, suffix → 1|
+|2|`nums[2] = -1`|`nums[0] = -2`|`-1`|`-2`|0 (neither beats it)|no|
 
-Traversal:
+**Return:** `totalMax = 0`
 
-* prefix = -2
-* prefix becomes 0 → reset to 1
-* prefix = -1
-
-Similarly for suffix.
-
-Maximum becomes:
-
-```text
-0
-```
-
-Return:
+Output:
 
 ```text
 0
 ```
 
-## Why Prefix and Suffix Work
+This matches the expected output. Notice the `0` was recorded into `totalMax` *before* the reset kicked in — that ordering is what lets a lone `0` be the correct answer when every other subarray product is negative.
 
-Consider:
+---
 
-```text
-[-1,-2,-3]
-```
+## Why This Approach Works
 
-Products from left:
+Negative numbers are what make this problem tricky: a running product can flip from very negative to very positive when another negative arrives. The useful structural fact is about **zero-free segments**. Within a stretch of the array containing no zeros:
 
-```text
--1
-2
--6
-```
+- If it has an **even** number of negatives, the product of the whole segment is positive, and that's the best possible for it.
+- If it has an **odd** number of negatives, the whole segment's product is negative, so the best option is to drop **either** everything up to and including the *first* negative, **or** everything from the *last* negative onward. Either way, the optimal subarray is a **prefix or a suffix of the segment**.
 
-Products from right:
+So in every case, the best subarray inside a zero-free segment is either a prefix or a suffix of it. Scanning a running **prefix product from the left** captures every prefix, and scanning a running **suffix product from the right** captures every suffix — covering all candidates without needing to track a separate running minimum.
 
-```text
--3
-6
--6
-```
+Resetting to `1` after a `0` is what handles segment boundaries: a zero would otherwise annihilate every product that follows it, so restarting at `1` begins a fresh, independent segment. Because the reset occurs **after** `totalMax` has been updated, the zero itself still counts as a candidate answer (a subarray consisting of just that `0`).
 
-The maximum product is **6**, which is found by the suffix traversal.
+Initializing `totalMax` to `Integer.MIN_VALUE` rather than `0` ensures arrays where every possible product is negative (like `[-3]`) still return the right value.
 
-Similarly, some cases are found only by the prefix traversal.
+---
 
-Scanning from **both directions** guarantees that we do not miss the optimal subarray.
+## Complexity Analysis
 
-## Time Complexity
+- **Time Complexity:** `O(n)` — a single loop of `n` iterations, with constant work (two multiplications, a few comparisons) per iteration
+- **Space Complexity:** `O(1)` — only a fixed set of integer variables is used, no auxiliary arrays or data structures
 
-* One traversal of the array.
+---
 
-**O(n)**
+## Key Insight
 
-## Space Complexity
+Instead of the common approach of tracking both a running maximum *and* a running minimum product (to handle sign flips), this solution leans on a structural property: the optimal subarray is always a prefix or suffix of a zero-free segment. That reduces the problem to two independent running products, one from each end, plus a reset at zeros — a neat way to sidestep explicit sign-flip bookkeeping.
 
-Only a few variables are used.
+---
 
-**O(1)**
+## Concepts Used
 
-## Pattern Recognition
-
-This problem belongs to:
-
-* Prefix/Suffix Traversal
-* Array
-* Dynamic Product Tracking
-* Handling Negative Numbers
-* Kadane-like Optimization
-
-## Interview Takeaway
-
-For **maximum sum subarray**, Kadane’s algorithm tracks only the maximum.
-
-For **maximum product subarray**, negatives can turn a small product into a large positive product.
-
-The prefix-suffix method works because:
-
-* zeros reset the product,
-* odd negatives can be removed by excluding either the left prefix or the right suffix.
-
-The key implementation pattern is:
-
-```java
-prefix *= nums[i];
-suffix *= nums[n - 1 - i];
-
-totalMax = Math.max(totalMax, Math.max(prefix, suffix));
-
-if (prefix == 0) prefix = 1;
-if (suffix == 0) suffix = 1;
-```
-
-This is one of the cleanest **O(n), O(1)** solutions for Maximum Product Subarray.
+- Array
+- Prefix Product / Suffix Product
+- Single-Pass Traversal (two directions at once)
+- Zero-Based Segment Reset
+- Constant Space Algorithm
