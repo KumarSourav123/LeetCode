@@ -2,317 +2,57 @@
 
 ## Problem Statement
 
-A **peak element** in a 2D grid is an element that is strictly greater than all of its adjacent neighbors to the left, right, top, and bottom.
+A **peak** element in a 2D grid is an element that is **strictly greater** than all of its **adjacent** neighbors to the left, right, top, and bottom.
 
-Given a `0-indexed` `m x n` matrix `mat` where no two adjacent cells are equal, find a peak element `mat[i][j]` and return its position `[i, j]`.
+Given a **0-indexed** `m x n` matrix `mat` where **no two adjacent cells are equal**, find **any** peak element `mat[i][j]` and return *the length 2 array* `[i,j]`.
 
-You may assume that the entire matrix is surrounded by an outer perimeter with the value `-1` in each cell.
+You may assume that the entire matrix is surrounded by an **outer perimeter** with the value `-1` in each cell.
 
-You must write an algorithm that runs in:
-
-```text
-O(m log n) or O(n log m)
-```
+You must write an algorithm that runs in `O(m log(n))` or `O(n log(m))` time.
 
 ---
 
 ## Example 1:
-
-```text
-Input: mat = [[1,4],
-              [3,2]]
-
+```
+Input: mat = [[1,4],[3,2]]
 Output: [0,1]
+Explanation: Both 3 and 4 are peak elements so [1,0] and [0,1] are both acceptable answers.
 ```
-
-### Explanation:
-
-Both `3` and `4` are peak elements.
-
-For example:
-
-```text
-[1, 4]
-[3, 2]
-```
-
-The element `4` at `[0,1]` is greater than its adjacent neighbors `1` and `2`.
-
-The element `3` at `[1,0]` is also greater than its adjacent neighbors `1` and `2`.
-
-Therefore, either `[0,1]` or `[1,0]` is an acceptable answer.
-
----
 
 ## Example 2:
-
-```text
-Input: mat = [[10,20,15],
-              [21,30,14],
-              [7,16,32]]
-
+```
+Input: mat = [[10,20,15],[21,30,14],[7,16,32]]
 Output: [1,1]
+Explanation: Both 30 and 32 are peak elements so [1,1] and [2,2] are both acceptable answers.
 ```
-
-### Explanation:
-
-The element `30` at `[1,1]` is a peak element because it is greater than all four adjacent elements:
-
-```text
-       20
-        |
-21 ---- 30 ---- 14
-        |
-       16
-```
-
-Therefore, `[1,1]` is a valid answer.
-
-`[2,2]` containing `32` is also a valid peak element.
-
----
 
 ## Constraints:
-
-* `m == mat.length`
-* `n == mat[i].length`
-* `1 <= m, n <= 500`
-* `1 <= mat[i][j] <= 10^9`
-* No two adjacent cells are equal.
-* Adjacent cells are only considered in the four directions: left, right, top, and bottom.
+- `m == mat.length`
+- `n == mat[i].length`
+- `1 <= m, n <= 500`
+- `1 <= mat[i][j] <= 10^5`
+- No two adjacent cells are equal.
 
 ---
 
 ## Approach
 
-This solution uses **Binary Search on Columns** combined with finding the **maximum element in the selected column**.
-
-Instead of checking every cell of the matrix, we perform binary search over the columns.
+This solution uses **binary search over the columns**. For the middle column, it finds the **largest element in that column**, then compares that element only against its left and right neighbors. Because it's already the biggest in its column, its top and bottom neighbors can't beat it — so only the horizontal comparison decides whether it's a peak, and if it isn't, which half of the matrix must contain one.
 
 ### Idea
 
-For every middle column:
-
-```text
-mid
-```
-
-we find the **maximum element in that entire column**.
-
-Suppose the maximum element is:
-
-```text
-mat[row][mid]
-```
-
-Because this is the maximum element in its column, it is automatically greater than its **top and bottom neighbors**.
-
-Therefore, we only need to compare it with its:
-
-```text
-left neighbor
-right neighbor
-```
-
-If it is greater than both, we have found a peak.
-
----
-
-## Step 1: Binary Search on Columns
-
-The code initializes:
-
-```java
-int low = 0;
-int high = n;
-```
-
-where `n` is the last column index:
-
-```java
-int n = mat[0].length - 1;
-```
-
-Then:
-
-```java
-while(low <= high)
-```
-
-performs binary search over the column range.
-
-For every iteration:
-
-```java
-int mid = (low+high)/2;
-```
-
-represents the column currently being examined.
-
----
-
-## Step 2: Find Maximum Element in the Column
-
-Once we have the middle column, we scan all rows in that column.
-
-```java
-int max = mat[0][mid];
-int row = 0;
-
-for(int i = 1; i <= m; i++){
-    if(mat[i][mid] > max){
-        max = mat[i][mid];
-        row = i;
-    }
-}
-```
-
-The largest element in the column is stored in:
-
-```text
-mat[row][mid]
-```
-
-Since it is the maximum element of the column:
-
-```text
-mat[row][mid] > top
-mat[row][mid] > bottom
-```
-
-whenever those neighbors exist.
-
-Therefore, we only need to check left and right.
-
----
-
-## Step 3: Handle Boundary Columns
-
-The matrix is surrounded by `-1`, so if the selected element is at the first or last column, we can treat the missing neighbor as `-1`.
-
-The code does this using:
-
-```java
-int left = mid-1 >= 0 ? mat[row][mid-1] : -1;
-int right = mid+1 <= n ? mat[row][mid+1] : -1;
-```
-
-Therefore:
-
-### If `mid` is the first column:
-
-```text
-left = -1
-```
-
-### If `mid` is the last column:
-
-```text
-right = -1
-```
-
-This makes the comparison work uniformly for all columns.
-
----
-
-## Step 4: Check Whether It Is a Peak
-
-The selected maximum element is a peak if:
-
-```java
-mat[row][mid] > right
-```
-
-and:
-
-```java
-mat[row][mid] > left
-```
-
-So the code checks:
-
-```java
-if((mat[row][mid] > right) && (mat[row][mid] > left)){
-    return new int[]{row,mid};
-}
-```
-
-If this condition is true, we immediately return the position.
-
----
-
-## Step 5: Decide Which Half to Search
-
-If the current element is not a peak, we need to decide which direction can contain a peak.
-
-### Case 1: Right Neighbor Is Greater
-
-If:
-
-```java
-max < right
-```
-
-then the right neighbor is greater than the maximum element of the current column.
-
-Therefore, there must be a peak somewhere toward the **right**.
-
-So we move the binary search to the right:
-
-```java
-low = mid+1;
-```
-
----
-
-### Case 2: Otherwise Search Left
-
-If:
-
-```java
-max >= right
-```
-
-and the current element was not a peak, the larger neighbor must be on the left.
-
-Therefore, we search the left half:
-
-```java
-high = mid-1;
-```
-
----
-
-## Why Finding the Maximum in a Column Helps
-
-Suppose the selected column is:
-
-```text
-       5
-       |
-       9
-       |
-       7
-       |
-       3
-```
-
-If `9` is the maximum element in the column, then:
-
-```text
-9 > 5
-9 > 7
-```
-
-So the vertical conditions are already satisfied.
-
-We only need to check:
-
-```text
-left < 9 > right
-```
-
-Therefore, finding the maximum in the column reduces the 2D peak problem to a comparison involving only the horizontal neighbors.
+- `m = mat.length - 1` and `n = mat[0].length - 1` are stored as the **last valid row and column indices** (not the sizes), which is why the loops below use `<=`.
+- Binary search over columns: `low = 0`, `high = n`.
+- **Loop** `while(low <= high)`:
+  - `mid = (low + high) / 2` — the column to examine.
+  - **Find the column maximum:** start with `max = mat[0][mid]` and `row = 0`, then scan rows `1` through `m`, updating `max` and `row` whenever a larger value appears in column `mid`.
+  - **Read the horizontal neighbors of that maximum:**
+    - `left = mat[row][mid-1]` if `mid - 1 >= 0`, otherwise `-1` (the outer perimeter).
+    - `right = mat[row][mid+1]` if `mid + 1 <= n`, otherwise `-1`.
+  - **If `mat[row][mid] > right` and `mat[row][mid] > left`**: this element beats both horizontal neighbors, and it beats its vertical neighbors automatically (it's the maximum of its column). It's a peak — return `[row, mid]`.
+  - **Else if `max < right`**: the right neighbor is larger, so a peak must exist in the columns to the right — `low = mid + 1`.
+  - **Else** (the left neighbor must be larger, since adjacent cells are never equal): a peak must exist in the columns to the left — `high = mid - 1`.
+- The final `return new int[]{0,0};` is only a fallback to satisfy the compiler; the problem guarantees a peak exists, so the loop always returns before reaching it.
 
 ---
 
@@ -321,7 +61,6 @@ Therefore, finding the maximum in the column reduces the 2D peak problem to a co
 ```java
 class Solution {
     public int[] findPeakGrid(int[][] mat) {
-
         int m = mat.length-1;
         int n = mat[0].length-1;
 
@@ -329,13 +68,11 @@ class Solution {
         int high = n;
 
         while(low <= high){
-
             int mid = (low+high)/2;
 
             int max = mat[0][mid];
             int row = 0;
-
-            for(int i = 1; i <= m; i++){
+            for(int i = 1 ; i <= m ; i++){
                 if(mat[i][mid] > max){
                     max = mat[i][mid];
                     row = i;
@@ -343,7 +80,7 @@ class Solution {
             }
 
             int left = mid-1 >= 0 ? mat[row][mid-1] : -1;
-            int right = mid+1 <= n ? mat[row][mid+1] : -1;
+            int right = mid + 1 <= n ? mat[row][mid+1] : -1;
 
             if((mat[row][mid] > right) && (mat[row][mid] > left)){
                 return new int[]{row,mid};
@@ -353,7 +90,6 @@ class Solution {
                 high = mid-1;
             }
         }
-
         return new int[]{0,0};
     }
 }
@@ -366,364 +102,103 @@ class Solution {
 ### Input
 
 ```text
-mat = [[1,4],
-       [3,2]]
+mat = [[10, 20, 15],
+       [21, 30, 14],
+       [ 7, 16, 32]]
 ```
 
-We have:
+`m = 2` (last row index), `n = 2` (last column index), `low = 0`, `high = 2`
 
-```text
-m = mat.length - 1
-  = 2 - 1
-  = 1
+**Iteration 1:** `low(0) <= high(2)` → runs. `mid = (0+2)/2 = 1`
 
-n = mat[0].length - 1
-  = 2 - 1
-  = 1
-```
+**Find the maximum of column 1** (values `20, 30, 16`):
 
-Initial binary search:
+| i | mat[i][1] | > max? | max | row |
+|---|-----------|--------|-----|-----|
+|0 (initial)|20|—|20|0|
+|1|30|30 > 20 → yes|30|1|
+|2|16|16 > 30 → no|30|1|
 
-```text
-low = 0
-high = 1
-```
+Column maximum is `30` at `row = 1`.
 
----
+| Step | Calculation | Result |
+|------|-------------|--------|
+|left|`mid-1 = 0 >= 0` → `mat[1][0]`|21|
+|right|`mid+1 = 2 <= n(2)` → `mat[1][2]`|14|
+|Peak check|`30 > 14` and `30 > 21`|**true**|
 
-### Iteration 1
+**Return:** `[1, 1]`
 
-Calculate:
-
-```text
-mid = (low + high) / 2
-    = (0 + 1) / 2
-    = 0
-```
-
-So we examine column `0`.
-
-Column `0` is:
-
-```text
-[1]
-[3]
-```
-
-Find the maximum:
-
-```text
-max = 3
-row = 1
-```
-
-Therefore:
-
-```text
-mat[row][mid]
-= mat[1][0]
-= 3
-```
-
-Now calculate the horizontal neighbors.
-
-### Left Neighbor
-
-Since:
-
-```text
-mid = 0
-```
-
-there is no column to the left.
-
-Therefore:
-
-```text
-left = -1
-```
-
-### Right Neighbor
-
-The right column is column `1`:
-
-```text
-right = mat[1][1]
-      = 2
-```
-
-Now check whether `3` is a peak:
-
-```text
-3 > 2  → true
-3 > -1 → true
-```
-
-Therefore:
-
-```text
-mat[1][0] = 3
-```
-
-is a peak element.
-
-The algorithm returns:
-
-```text
-[1,0]
-```
-
-`[1,0]` is accepted because the problem allows **any valid peak element**.
-
----
-
-## Dry Run Table
-
-| `low` | `high` | `mid` | Maximum in Column | `row` | Left | Right | Peak? | Action         |
-| ----- | ------ | ----- | ----------------- | ----- | ---- | ----- | ----- | -------------- |
-| 0     | 1      | 0     | 3                 | 1     | -1   | 2     | Yes   | Return `[1,0]` |
-
-Therefore:
-
-```text
-Output = [1,0]
-```
-
-Although the example shows `[0,1]`, `[1,0]` is also a correct answer.
-
----
-
-## Another Dry Run
-
-### Input
-
-```text
-mat = [[10,20,15],
-       [21,30,14],
-       [7,16,32]]
-```
-
-The matrix has:
-
-```text
-3 rows
-3 columns
-```
-
-Therefore:
-
-```text
-low = 0
-high = 2
-```
-
----
-
-### Iteration 1
-
-Calculate:
-
-```text
-mid = (0 + 2) / 2
-    = 1
-```
-
-We examine column `1`:
-
-```text
-20
-30
-16
-```
-
-The maximum element is:
-
-```text
-30
-```
-
-at:
-
-```text
-row = 1
-```
-
-So:
-
-```text
-mat[1][1] = 30
-```
-
-Its horizontal neighbors are:
-
-```text
-left  = mat[1][0] = 21
-right = mat[1][2] = 14
-```
-
-Check:
-
-```text
-30 > 21 → true
-30 > 14 → true
-```
-
-Therefore, `30` is a peak.
-
-The algorithm returns:
+Output:
 
 ```text
 [1,1]
 ```
 
+This matches the expected output — `30` is greater than its left (`21`), right (`14`), top (`20`), and bottom (`16`) neighbors.
+
+### Additional trace — a case that moves the search window (not from the official examples)
+
+The official examples both resolve on the first iteration, so here's a custom input that actually exercises the `low = mid + 1` branch:
+
+```text
+mat = [[1, 2, 3],
+       [4, 5, 6],
+       [7, 8, 9]]
+```
+
+`m = 2`, `n = 2`, `low = 0`, `high = 2`
+
+**Iteration 1:** `mid = 1`. Column 1 is `2, 5, 8`, so `max = 8`, `row = 2`.
+
+| Step | Calculation | Result |
+|------|-------------|--------|
+|left|`mat[2][0]`|7|
+|right|`mid+1 = 2 <= 2` → `mat[2][2]`|9|
+|Peak check|`8 > 9`?|false|
+|Next branch|`max(8) < right(9)`|true → `low = mid + 1 = 2`|
+
+**Iteration 2:** `low(2) <= high(2)` → runs. `mid = 2`. Column 2 is `3, 6, 9`, so `max = 9`, `row = 2`.
+
+| Step | Calculation | Result |
+|------|-------------|--------|
+|left|`mid-1 = 1 >= 0` → `mat[2][1]`|8|
+|right|`mid+1 = 3 <= 2`? no → perimeter|-1|
+|Peak check|`9 > -1` and `9 > 8`|**true**|
+
+**Return:** `[2, 2]` — the bottom-right `9`, which is indeed greater than all of its neighbors.
+
 ---
 
 ## Why This Approach Works
 
-The key observation is that we do not need to examine every element in the matrix.
+Choosing the **maximum of the entire column** is what makes the horizontal-only check sufficient. If that value beats its left and right neighbors, then its top and bottom neighbors are automatically smaller (they're in the same column, and it's the column's maximum), so it's a true 2D peak without ever checking vertical neighbors explicitly.
 
-For a selected column:
+When it *isn't* a peak, one horizontal neighbor is bigger (adjacent cells are never equal, so exactly one side — or both — is strictly larger). The key claim is that a peak must exist in the half of the matrix on the **side of the larger neighbor**. Intuitively, if you keep walking toward larger values, you strictly increase each step and can never loop back; since the matrix is bounded by `-1` on every side, the walk must eventually stop at a cell larger than all its neighbors — and the walk can't cross back over the column you started from, because that column's maximum is already smaller than the neighbor you stepped onto. So discarding the other half, and the current column, loses nothing.
 
-1. Find its maximum element.
-2. Because it is the column maximum, it is already greater than its vertical neighbors.
-3. Only compare it with its left and right neighbors.
-4. If it is not a peak and the right neighbor is larger, move right.
-5. Otherwise, move left.
+Each iteration therefore either finds a peak or **halves the number of candidate columns**, exactly like a standard binary search — except the per-step work is a scan down one column rather than a single comparison.
 
-The important property is that if the current maximum has a larger neighbor on one side, moving toward that larger neighbor guarantees that we can continue toward a peak.
-
-This allows us to eliminate approximately half of the columns after every binary search step.
-
-The process looks like:
-
-```text
-All Columns
-     ↓
-Choose Middle Column
-     ↓
-Find Maximum Element
-     ↓
-Check Left & Right
-     ↓
-   Peak?
-  /     \
-Yes      No
- ↓        ↓
-Return   Move toward
-         larger neighbor
-              ↓
-       Repeat Binary Search
-```
-
-Because every step eliminates approximately half of the columns, the algorithm is much faster than checking every cell.
+The `-1` sentinel for out-of-range neighbors mirrors the problem's own "surrounded by `-1`" assumption: since every real value is at least `1`, a missing neighbor never blocks an element from being a peak.
 
 ---
 
 ## Complexity Analysis
 
-Let:
-
-```text
-m = number of rows
-n = number of columns
-```
-
-### Time Complexity
-
-For every binary search iteration, we scan all `m` rows to find the maximum element in the selected column.
-
-Binary search takes:
-
-```text
-O(log n)
-```
-
-iterations.
-
-Therefore:
-
-```text
-O(m log n)
-```
-
-is the overall time complexity.
-
-### Space Complexity
-
-Only a constant number of variables are used:
-
-```text
-max
-row
-low
-high
-mid
-left
-right
-```
-
-Therefore:
-
-```text
-O(1)
-```
-
-extra space is used.
+- **Time Complexity:** `O(m log n)` — the binary search runs over columns (`O(log n)` iterations), and each iteration scans one full column of `m` rows to find its maximum, matching the problem's required bound
+- **Space Complexity:** `O(1)` — only a fixed set of integer variables is used, no auxiliary arrays or data structures
 
 ---
 
 ## Key Insight
 
-This problem is a classic example of **Binary Search on a 2D Matrix**.
-
-Instead of searching every cell:
-
-```text
-O(m × n)
-```
-
-we perform binary search on the columns.
-
-For each selected column:
-
-```text
-Find maximum element
-        ↓
-Check left and right
-        ↓
-Is it a peak?
-    /        \
-  Yes         No
-   ↓           ↓
-Return     Move toward
-           larger side
-```
-
-The most important idea is:
-
-> **Find the maximum element of the middle column because its top and bottom neighbors are automatically smaller. Then only the left and right neighbors need to be checked.**
-
-This reduces the problem from a complete matrix traversal to:
-
-```text
-O(m log n)
-```
-
-which satisfies the required complexity.
+This is a 2D extension of the classic 1D "find a peak element" binary search. The trick that makes it work in two dimensions is **collapsing one dimension**: by always examining the maximum of a whole column, the vertical comparison is satisfied for free, reducing the 2D problem to a 1D one over columns. The same idea works symmetrically by searching over rows and taking row maximums.
 
 ---
 
 ## Concepts Used
 
-* 2D Array / Matrix
-* Binary Search
-* Binary Search on Columns
-* Peak Element
-* Maximum Element in a Column
-* Divide and Conquer
-* Greedy Direction Selection
-* Boundary Handling
-* `Integer` / Sentinel Value `-1`
-* Monotonic Search Direction
-* `O(m log n)` Optimization
-* Constant Space
+- Matrix / 2D Array
+- Binary Search
+- Peak Finding
+- Dimension Reduction (column maximum)
+- Constant Space Algorithm
